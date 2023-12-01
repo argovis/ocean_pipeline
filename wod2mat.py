@@ -1,5 +1,6 @@
-import numpy, pandas, glob, datetime, scipy.io, sys
+import numpy, pandas, glob, datetime, scipy.io, sys, bisect
 from wodpy import wod
+import scipy.interpolate
 
 pandas.set_option('display.max_colwidth', None)
 pandas.set_option('display.max_rows', None)
@@ -50,9 +51,14 @@ def filterQCandPressure(t,s,p, t_qc,s_qc,p_qc, acceptable, pressure):
 
 	return t_filter, s_filter, p_filter	
 
-files = glob.glob("/scratch/alpine/wimi7695/wod/all/ocldb*")
+#files = glob.glob("/scratch/alpine/wimi7695/wod/all/ocldb*")
+files = glob.glob(sys.argv[1] + '/ocldb*')
 #file = sys.argv[1]
-table = []
+y = int(sys.argv[2])
+m = int(sys.argv[3])
+p_interp = float(sys.argv[4])
+t_table = []
+s_table = []
 for file in files:
 	fid = open(file)
 	filetype = file.split('.')[-1]
@@ -60,35 +66,60 @@ for file in files:
 	while True:
 		pindex = p.var_index(25)
 
-		temp,psal,pres = filterQCandPressure(p.t(), p.s(), p.p(), p.t_level_qc(originator=False), p.s_level_qc(originator=False), p.var_level_qc(pindex), [0], 2100)
-		if len(temp) > 0 and len(pres) > 0:
-			table.append([
-				mljul(p.year(),p.month(),p.day(),p.time()),
-				remap_longitude(p.longitude()), 
-				p.latitude(), 
-				p.month(),
-				pres,
-				psal,
-				temp,
-				p.year(),
-				#filetype,
-				0,
-				0
-			])
+		temp,psal,pres = filterQCandPressure(p.t(), p.s(), p.p(), p.t_level_qc(originator=False), p.s_level_qc(originator=False), p.var_level_qc(pindex), [0], 10000000)
+		if len(pres) > 0 and pres[0] <= p_interp and pres[-1] >= p_interp and y == p.year() and m == p.month():
+
+			# make sure there's at least one value within <radius> of p_interp
+			radius = 15
+			p_min = max(0,p_interp-15)
+			p_max = p_interp+15
+			p_min_i = bisect.bisect_left(pres, p_min)
+			p_max_i = bisect.bisect_right(pres,p_max)
+			t_region = temp[p_min_i:p_max_i]
+			s_region = psal[p_min_i:p_max_i]
+
+			if not numpy.isnan(t_region).all():
+				t_interp = scipy.interpolate.pchip_interpolate(pres, temp, p_interp)
+				t_table.append([
+					mljul(p.year(),p.month(),p.day(),p.time()),
+					remap_longitude(p.longitude()), 
+					p.latitude(), 
+					p.month(),
+					[p_interp],
+					[t_interp],
+					p.year(),
+					#filetype,
+					0,
+					0
+				])	
+
+
+			if not numpy.isnan(s_region).all():
+				s_interp = scipy.interpolate.pchip_interpolate(pres, psal, p_interp)
+				s_table.append([
+					mljul(p.year(),p.month(),p.day(),p.time()),
+					remap_longitude(p.longitude()), 
+					p.latitude(), 
+					p.month(),
+					[p_interp],
+					[s_interp],
+					p.year(),
+					#filetype,
+					0,
+					0
+				])
 
 		if p.is_last_profile_in_file(fid):
 			break
 		else:
 			p = wod.WodProfile(fid)
 
-
-df = pandas.DataFrame(table, columns = [
+t_df = pandas.DataFrame(table, columns = [
 		'profJulDayAggr',  
 		'profLongAggr', 
 		'profLatAggr', 
 		'profMonthAggr',
 		'profPresAggr', 
-		'profPsalAggr', 
 		'profTempAggr', 
 		'profYearAggr', 
 		#'WODtype', 
@@ -96,5 +127,24 @@ df = pandas.DataFrame(table, columns = [
 		'profFloatIDAggr'
 	]) 
 
-#print(df['profPresAggr'])
-scipy.io.savemat('/scratch/alpine/wimi7695/wod/all/wod.mat', df.to_dict("list"))
+scipy.io.savemat(f'/scratch/alpine/wimi7695/wod/interp/TS_WOD_PFL_CTD_MBR_{m}_{y}_{p_interp}_temp.mat', df.to_dict("list"))
+
+s_df = pandas.DataFrame(table, columns = [
+		'profJulDayAggr',  
+		'profLongAggr', 
+		'profLatAggr', 
+		'profMonthAggr',
+		'profPresAggr', 
+		'profPsalAggr', 
+		'profYearAggr', 
+		#'WODtype', 
+		'profCycleNumberAggr', 
+		'profFloatIDAggr'
+	]) 
+
+scipy.io.savemat(f'/scratch/alpine/wimi7695/wod/interp/TS_WOD_PFL_CTD_MBR_{m}_{y}_{p_interp}_psal.mat', df.to_dict("list"))
+
+
+
+
+
