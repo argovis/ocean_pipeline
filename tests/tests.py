@@ -8,3 +8,9 @@ def test_has_common_non_nan_value():
 
     assert helpers.test_has_common_non_nan_value(x,y)
     assert not helpers.test_has_common_non_nan_value(x,z)
+
+def test_find_bracket():
+
+	x = [1.2, 3.3, 4.0, 5.1, 8.8, 10]
+
+	assert find_bracket(x, 2, 6) == (0,4)
