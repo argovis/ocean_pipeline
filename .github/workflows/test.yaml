@@ -8,7 +8,7 @@ on:
 jobs:
   test:
     runs-on: ubuntu-latest
-    container: python:3.9
+    container: argovis/wod2mat:dev
 
     steps:
       - name: checkout
