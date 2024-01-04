@@ -1,4 +1,4 @@
-import numpy, datetime, scipy.interpolate, scipy.integrate
+import numpy, datetime, scipy.interpolate, scipy.integrate, math
 
 def mljul(year, month, day, time):
 	# compute something appropriate to interpret as matlab's julian day
