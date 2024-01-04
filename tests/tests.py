@@ -13,4 +13,4 @@ def test_find_bracket():
 
 	x = [1.2, 3.3, 4.0, 5.1, 8.8, 10]
 
-	assert find_bracket(x, 2, 6) == (0,4)
+	assert helpers.find_bracket(x, 2, 6) == (0,4)
