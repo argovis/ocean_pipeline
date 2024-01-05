@@ -1,22 +1,33 @@
-# usage: python <WOD ascii file directory> <year> <month> <pressure level of interest OR pressure range shallow,deep for integral> <'conservative' or 'potential' temperature switch>
+# usage: python wod2mat.py <WOD ascii file directory> <year> <month> <pressure level of interest OR pressure range shallow,deep for integral> <'conservative' or 'potential' temperature switch>
 
-import numpy, pandas, glob, datetime, scipy.io, sys, bisect, gsw
+import numpy, pandas, glob, datetime, scipy.io, sys, bisect, gsw, argparse
 from wodpy import wod
 import scipy.interpolate
 import scipy.integrate
-import helpers
+from helpers import helpers
 
 pandas.set_option('display.max_colwidth', None)
 pandas.set_option('display.max_rows', None)
 
+# argument setup 
+parser = argparse.ArgumentParser()
+parser.add_argument("--data_dir", type=str, help="directory with ASCII WOD data")
+parser.add_argument("--year", type=int, help="year")
+parser.add_argument("--month", type=int, help="month")
+parser.add_argument("--pressure", type=float, nargs='+', help="either one pressure level, or a range low high for integration")
+parser.add_argument("--temp_type", type=str, help="potential or conservative")
+parser.add_argument("--pressure_buffer", type=float, nargs='?', const=100.0, default=100.0, help="pressure range to keep on either side of the pressure ROI")
+parser.add_argument("--pressure_index_buffer", type=int, nargs='?', const=5, default=5, help="minimum number of elements to preserve in the pressure buffer margins")
+args = parser.parse_args()
+
 #files = glob.glob("/scratch/alpine/wimi7695/wod/all/ocldb*")
 
-# parse some command line arguments
-files = glob.glob(sys.argv[1] + '/ocldb*')
+# ingest command line arguments
+files = glob.glob(args['data_dir'] + '/ocldb*')
 #file = sys.argv[1]
-y = int(sys.argv[2])
-m = int(sys.argv[3])
-p_arg = [float(n) for n in sys.argv[4].split(',')]
+y = int(args['year'])
+m = int(args['month'])
+p_arg = args['pressure']
 p_interp = False
 p_range = False
 if len(p_arg) == 1:
@@ -25,7 +36,7 @@ if len(p_arg) == 1:
 else:
 	# level integral
 	p_range = p_arg
-temp_type = sys.argv[5]
+temp_type = args['temp_type']
 
 # build tables
 t_table = []
@@ -36,29 +47,46 @@ for file in files:
 	p = wod.WodProfile(fid)
 	while True:
 		if y != p.year() or m != p.month():
-			continue
+			#continue
+			break
 
 		pindex = p.var_index(25)
 
 		# extract and QC filter in situ measurements
 		temp,psal,pres = helpers.filterQCandPressure(p.t(), p.s(), p.p(), p.t_level_qc(originator=False), p.s_level_qc(originator=False), p.var_level_qc(pindex), [0], 10000000)
+		if len(pres) == 0:
+			print(p.uid(), 'no data passing QC')
+			if p.is_last_profile_in_file(fid):
+				break
+			else:
+				p = wod.WodProfile(fid)
+			continue
 
 		# make sure there's meaningful data in range:
-		## single level interpolation: a level with both temp and salinity within <radius> of p_interp
+		## single level interpolation: a level with both temp and salinity within 15 dbar of p_interp
 		if p_interp:
 			p_min_i, p_max_i = helpers.pad_bracket(pres, p_interp, p_interp, 15, 0)
 			t_in_radius = temp[p_min_i+1:p_max_i]
 			s_in_radius = psal[p_min_i+1:p_max_i]
 			if not helpers.has_common_non_nan_value(t_in_radius, s_in_radius):
+				print(p.uid(), 'no data in range')
+				if p.is_last_profile_in_file(fid):
+					break
+				else:
+					p = wod.WodProfile(fid)
 				continue
 		## range integral: entire integral range is inside the pressure range found in the profile
 		elif p_range:
 			if p_range[0] < pres[0] or p_range[1] > pres[-1]:
+				if p.is_last_profile_in_file(fid):
+					break
+				else:
+					p = wod.WodProfile(fid)
 				continue
 
 		# narrow down levels considered to things near the region of interest
-		near = 100 # dbar on either side of the level or integration region
-		places = 5 # make sure we're keeping at least 5 levels above and below the ROI
+		near = args['pressure_buffer'] # dbar on either side of the level or integration region
+		places = args['pressure_index_buffer'] # make sure we're keeping at least 5 levels above and below the ROI
 		if p_interp:
 			p_bracket = helpers.pad_bracket(pres, p_interp, p_interp, near, places)
 		elif p_range:
@@ -66,6 +94,15 @@ for file in files:
 		p_region = pres[p_bracket[0]:p_bracket[1]+1]
 		t_region = temp[p_bracket[0]:p_bracket[1]+1]
 		s_region = psal[p_bracket[0]:p_bracket[1]+1]
+
+		# degenerate pressure levels ruin the interpolation, bail out if found
+		if helpers.has_repeated_elements(p_region):
+			print(p.uid(), 'degenerate levels')
+			if p.is_last_profile_in_file(fid):
+				break
+			else:
+				p = wod.WodProfile(fid)
+			continue
 
 		# compute absolute salinity
 		abs_sal = [gsw.conversions.SA_from_SP(s_region[i], p_region[i], p.longitude(), p.latitude()) for i in range(len(p_region))]
@@ -118,7 +155,7 @@ for file in files:
 					print(p.uid())
 					print('pressure', p_region)
 					print('salinity', abs_sal)
-		# integrate across ROI
+		# or, integrate across ROI
 		elif p_range:
 			if not numpy.isnan(t_star).all():
 				try:
@@ -163,6 +200,10 @@ for file in files:
 			break
 		else:
 			p = wod.WodProfile(fid)
+
+# remove profiles that are exactly colocated and less than 15 minutes apart
+t_table = helpers.sort_and_remove_neighbors(t_table, 1,2,0)
+s_table = helpers.sort_and_remove_neighbors(s_table, 1,2,0)
 
 # choose names for whatever it was we just calculated
 if p_interp and temp_type == 'potential':
