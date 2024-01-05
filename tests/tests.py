@@ -39,3 +39,19 @@ def test_interpolate_and_integrate():
 	assert numpy.isclose(helpers.interpolate_and_integrate(x, y, 3.5, 4.5), 2), 'basic integral on flat region'
 	assert numpy.isclose(helpers.interpolate_and_integrate(x, y, 2, 3), 6), 'integral over slope'
 	assert numpy.isclose(helpers.interpolate_and_integrate(x, y, 0, 10), 68), 'integral over whole range'
+
+def test_sort_and_remove_neighbors():
+
+	x = [
+			[0,0,1234],
+			[10,10,1234],
+			[0,0,1234.01],
+			[0,1,1234.01],
+			[0,0,1234.02]
+		]
+
+	assert helpers.sort_and_remove_neighbors(x, 0, 1, 2) == [
+			[0,0,1234],
+			[0,1,1234.01],
+			[10,10,1234]
+		]

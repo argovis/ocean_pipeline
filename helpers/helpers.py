@@ -1,4 +1,4 @@
-import numpy, datetime, scipy.interpolate, scipy.integrate, math
+import numpy, datetime, scipy.interpolate, scipy.integrate, math, operator
 
 def mljul(year, month, day, time):
     # compute something appropriate to interpret as matlab's julian day
@@ -87,16 +87,11 @@ def interpolate_and_integrate(pressures, temperatures, low_roi, high_roi):
     # perform a trapezoidal integration with pressures=x and temperatures=y, from pressure==low_roi to high_roi
 
     levels = numpy.arange(low_roi, high_roi+0.2, 0.2) # fine level spectrum across the ROI
-    print(levels)
     t_interp = scipy.interpolate.pchip_interpolate(pressures, temperatures, levels)
-    print(t_interp)
 
     integration_region = find_bracket(levels, low_roi, high_roi)
-    print(integration_region)
     p_integration = levels[integration_region[0] : integration_region[1]+1]
-    print(p_integration)
     t_integration = t_interp[integration_region[0] : integration_region[1]+1]
-    print(t_integration)
 
     return scipy.integrate.trapezoid(t_integration, x=p_integration)
 
@@ -125,3 +120,21 @@ def filterQCandPressure(t,s,p, t_qc,s_qc,p_qc, acceptable, pressure):
     s_filter = [x[1] for x in goodTPS]
 
     return t_filter, s_filter, p_filter    
+
+def has_repeated_elements(lst):
+    for i in range(len(lst) - 1):
+        if lst[i] == lst[i + 1]:
+            return True
+    return False
+
+def sort_and_remove_neighbors(lst, lon_idx, lat_idx, jul_idx):
+    # given a list of lists that has longitude at <lon_idx>, latitude at <lat_idx> and julian decimal day at <jul_idx>,
+    # return the list sorted by longitude and latitude, with profiles at the same lon/lat and within 15 minutes of each other suppressed
+
+    s = sorted(lst, key = operator.itemgetter(lon_idx, lat_idx))
+
+    for i in range(len(s)-1,0,-1):
+        if s[i][lon_idx] == s[i-1][lon_idx] and s[i][lat_idx] == s[i-1][lat_idx] and abs(s[i][jul_idx] - s[i-1][jul_idx]) < 15.0/1440.0:
+            del s[i]
+
+    return s
