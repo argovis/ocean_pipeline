@@ -12,6 +12,7 @@ pandas.set_option('display.max_rows', None)
 # argument setup 
 parser = argparse.ArgumentParser()
 parser.add_argument("--data_dir", type=str, help="directory with ASCII WOD data")
+parser.add_argument("--out_dir", type=str, help="directory to write output mat files to")
 parser.add_argument("--year", type=int, help="year")
 parser.add_argument("--month", type=int, help="month")
 parser.add_argument("--pressure", type=float, nargs='+', help="either one pressure level, or a range low high for integration")
@@ -23,11 +24,11 @@ args = parser.parse_args()
 #files = glob.glob("/scratch/alpine/wimi7695/wod/all/ocldb*")
 
 # ingest command line arguments
-files = glob.glob(args['data_dir'] + '/ocldb*')
+files = glob.glob(args.data_dir + '/ocldb*')
 #file = sys.argv[1]
-y = int(args['year'])
-m = int(args['month'])
-p_arg = args['pressure']
+y = int(args.year)
+m = int(args.month)
+p_arg = args.pressure
 p_interp = False
 p_range = False
 if len(p_arg) == 1:
@@ -36,7 +37,7 @@ if len(p_arg) == 1:
 else:
 	# level integral
 	p_range = p_arg
-temp_type = args['temp_type']
+temp_type = args.temp_type
 
 # build tables
 t_table = []
@@ -85,8 +86,8 @@ for file in files:
 				continue
 
 		# narrow down levels considered to things near the region of interest
-		near = args['pressure_buffer'] # dbar on either side of the level or integration region
-		places = args['pressure_index_buffer'] # make sure we're keeping at least 5 levels above and below the ROI
+		near = args.pressure_buffer # dbar on either side of the level or integration region
+		places = args.pressure_index_buffer # make sure we're keeping at least 5 levels above and below the ROI
 		if p_interp:
 			p_bracket = helpers.pad_bracket(pres, p_interp, p_interp, near, places)
 		elif p_range:
@@ -234,9 +235,7 @@ t_df = pandas.DataFrame(t_table, columns = [
 		'profFloatIDAggr'
 	]) 
 
-print(t_df)
-
-#scipy.io.savemat(f'/scratch/alpine/wimi7695/wod/interp/TS_WOD_PFL_CTD_MBR_{m}_{y}_{p_interp}_temp.mat', df.to_dict("list"))
+scipy.io.savemat(f'{args.out_dir}/{tname}_{y}_{m}_{"_".join(map(str, args.pressure))}.mat', t_df.to_dict("list"))
 
 s_df = pandas.DataFrame(s_table, columns = [
 		'profJulDayAggr',  
@@ -251,5 +250,5 @@ s_df = pandas.DataFrame(s_table, columns = [
 		'profFloatIDAggr'
 	]) 
 
-#scipy.io.savemat(f'/scratch/alpine/wimi7695/wod/interp/TS_WOD_PFL_CTD_MBR_{m}_{y}_{p_interp}_psal.mat', df.to_dict("list"))
+scipy.io.savemat(f'{args.out_dir}/{sname}_{y}_{m}_{"_".join(map(str, args.pressure))}.mat', s_df.to_dict("list"))
 
