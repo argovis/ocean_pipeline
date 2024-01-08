@@ -48,8 +48,7 @@ for file in files:
 	p = wod.WodProfile(fid)
 	while True:
 		if y != p.year() or m != p.month():
-			#continue
-			break
+			continue
 
 		pindex = p.var_index(25)
 
