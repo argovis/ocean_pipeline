@@ -48,6 +48,10 @@ for file in files:
 	p = wod.WodProfile(fid)
 	while True:
 		if y != p.year() or m != p.month():
+			if p.is_last_profile_in_file(fid):
+				break
+			else:
+				p = wod.WodProfile(fid)
 			continue
 
 		pindex = p.var_index(25)
