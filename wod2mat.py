@@ -25,7 +25,7 @@ args = parser.parse_args()
 #files = glob.glob("/scratch/alpine/wimi7695/wod/all/ocldb*")
 
 # ingest command line arguments
-files = glob.glob(args.data_dir)
+files = glob.glob(args.data_dir + '/*')
 #file = sys.argv[1]
 y = int(args.year)
 #m = int(args.month)
@@ -121,7 +121,7 @@ for file in files:
 
         # interpolate to specific level:
         if p_interp:
-            for i, t_star in [t_potential, t_conservative]:
+            for i, t_star in enumerate([t_potential, t_conservative]):
                 if not numpy.isnan(t_star).all():
                     try:
                         t_interp = scipy.interpolate.PchipInterpolator(p_region, t_star, extrapolate=False)(p_interp)
@@ -162,7 +162,7 @@ for file in files:
                     print('salinity', abs_sal)
         # or, integrate across ROI
         elif p_range:
-            for i, t_star in [t_potential, t_conservative]:
+            for i, t_star in enumerate([t_potential, t_conservative]):
                 if not numpy.isnan(t_star).all():
                     try:
                         t_integrate = helpers.interpolate_and_integrate(p_region, t_star, p_range[0], p_range[1])
