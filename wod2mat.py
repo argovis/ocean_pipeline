@@ -143,7 +143,7 @@ for file in files:
                         print('temperature', t_region)
             if not numpy.isnan(abs_sal).all():
                 try:
-                    s_interp = scipy.interpolate.PchipInterpolator(p_region, abs_sa, extrapolate=False)(p_interp)
+                    s_interp = scipy.interpolate.PchipInterpolator(p_region, abs_sal, extrapolate=False)(p_interp)
                     s_table.append([
                         helpers.mljul(p.year(),p.month(),p.day(),p.time()),
                         helpers.remap_longitude(p.longitude()), 
@@ -156,7 +156,8 @@ for file in files:
                         0,
                         0
                     ])
-                except:
+                except e:
+                    print(e)
                     print(p.uid())
                     print('pressure', p_region)
                     print('salinity', abs_sal)
