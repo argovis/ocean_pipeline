@@ -138,3 +138,13 @@ def sort_and_remove_neighbors(lst, lon_idx, lat_idx, jul_idx):
             del s[i]
 
     return s
+
+def mask_far_interps(measured_pressures, interp_levels, interp_values, radius=15):
+    # mask interpolated values that are more than <radius> dbar from the nearest measured pressure
+
+    for i, level in enumerate(interp_levels):
+        closest = min(measured_pressures, key=lambda x: abs(x - level))
+        if abs(closest - level) > radius:
+            interp_values[i] = numpy.nan
+
+    return interp_values

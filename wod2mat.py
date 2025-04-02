@@ -56,15 +56,15 @@ for file in files:
 
         pindex = p.var_index(25)
 
-        # extract and QC filter in situ measurements
-        temp,psal,pres = helpers.filterQCandPressure(p.t(), p.s(), p.p(), p.t_level_qc(originator=False), p.s_level_qc(originator=False), p.var_level_qc(pindex), [0], 10000000)
-        if len(pres) == 0:
-            print(p.uid(), 'no data passing QC')
-            if p.is_last_profile_in_file(fid):
-                break
-            else:
-                p = wod.WodProfile(fid)
-            continue
+        # # extract and QC filter in situ measurements
+        # temp,psal,pres = helpers.filterQCandPressure(p.t(), p.s(), p.p(), p.t_level_qc(originator=False), p.s_level_qc(originator=False), p.var_level_qc(pindex), [0], 10000000)
+        # if len(pres) == 0:
+        #     print(p.uid(), 'no data passing QC')
+        #     if p.is_last_profile_in_file(fid):
+        #         break
+        #     else:
+        #         p = wod.WodProfile(fid)
+        #     continue
 
         # make sure there's meaningful data in range:
         ## single level interpolation: a level with both temp and salinity within 15 dbar of p_interp
@@ -108,16 +108,16 @@ for file in files:
                 p = wod.WodProfile(fid)
             continue
 
-        # compute absolute salinity
-        abs_sal = [gsw.conversions.SA_from_SP(s_region[i], p_region[i], p.longitude(), p.latitude()) for i in range(len(p_region))]
+        # # compute absolute salinity
+        # abs_sal = [gsw.conversions.SA_from_SP(s_region[i], p_region[i], p.longitude(), p.latitude()) for i in range(len(p_region))]
 
-        # compute potential and / or conservative temperature
-        if args.potential_temperature:
-            t_potential = gsw.conversions.pt0_from_t(abs_sal, t_region, p_region)
-            t_potential = [t + 273.15 for t in t_potential]
-        if args.conservative_temperature:
-            t_conservative = gsw.conversions.CT_from_t(abs_sal, t_region, p_region)
-            t_conservative = [t + 273.15 for t in t_conservative]
+        # # compute potential and / or conservative temperature
+        # if args.potential_temperature:
+        #     t_potential = gsw.conversions.pt0_from_t(abs_sal, t_region, p_region)
+        #     t_potential = [t + 273.15 for t in t_potential]
+        # if args.conservative_temperature:
+        #     t_conservative = gsw.conversions.CT_from_t(abs_sal, t_region, p_region)
+        #     t_conservative = [t + 273.15 for t in t_conservative]
 
         # interpolate to specific level:
         if p_interp:

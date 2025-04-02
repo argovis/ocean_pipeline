@@ -33,7 +33,7 @@ for file in files:
                 p = wod.WodProfile(fid)
             continue
         
-        filetype = file[0:3]
+        filetype = file.split('/')[-1][0:3]
         juld = helpers.mljul(p.year(),p.month(),p.day(),p.time())
         month = p.month()
         lat = p.latitude()

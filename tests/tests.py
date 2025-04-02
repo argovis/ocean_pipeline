@@ -55,3 +55,11 @@ def test_sort_and_remove_neighbors():
 			[0,1,1234.01],
 			[10,10,1234]
 		]
+
+def test_mask_far_interps():
+
+    insitu_pres = [0,1,2,3,4,5,6,7,8,9]
+    interp_pres = [4.5, 20, 50] # note its not this function's job to disqualify levels outside of the range of measurements, only interpolated levels that don't have a close neighbor.
+    interp_vals = [0,1,2]
+
+    assert numpy.allclose(helpers.mask_far_interps(insitu_pres, interp_pres, interp_vals), [0,1,numpy.nan],equal_nan=True), 'basic mask'
