@@ -15,6 +15,7 @@ args = parser.parse_args()
 # load data, detect which variables are present
 df = pandas.read_parquet(args.input_file, engine='pyarrow')
 vars = [col for col in df.columns if isinstance(df.iloc[0][col], numpy.ndarray)]
+vars.remove('pressure')
 
 def interpolate_to_levels(row, var, levels):
     try:
@@ -29,15 +30,12 @@ def interpolate_to_levels(row, var, levels):
         
     except Exception as e:
         print(f'pchip interpolation failed at {var}, {row["juld"]}, {row["latitude"]}, {row["longitude"]}: {e}')
-        interp = [numpy.nan]*len(levels)
+        interp = 0xDEADBEEF
 
     return interp
 
 # interpolate everything to specified levels
 for var in vars:
-    if var == 'pressure':
-        continue
-
     df[var] = df.apply(
         lambda row: interpolate_to_levels(row, var, args.levels),
         axis=1
@@ -48,4 +46,9 @@ df['pressure'] = df.apply(
     axis=1
 )
 
+# drop any profiles where interpolation failed
+df = df[~df.apply(lambda row: any(isinstance(row[col], int) and (row[col]==0xDEADBEEF) for col in vars), axis=1)]
+df.reset_index(drop=True, inplace=True)
+
+print(df)
 df.to_parquet(f"{args.input_file.split('.')[0]}_interpolated.parquet", engine='pyarrow')
