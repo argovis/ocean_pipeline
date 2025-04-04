@@ -89,15 +89,15 @@ for file in files:
                 continue
 
         # narrow down levels considered to things near the region of interest
-        near = args.pressure_buffer # dbar on either side of the level or integration region
-        places = args.pressure_index_buffer # make sure we're keeping at least 5 levels above and below the ROI
-        if p_interp:
-            p_bracket = helpers.pad_bracket(pres, p_interp, p_interp, near, places)
-        elif p_range:
-            p_bracket = helpers.pad_bracket(pres, p_range[0], p_range[1], near, places)
-        p_region = pres[p_bracket[0]:p_bracket[1]+1]
-        t_region = temp[p_bracket[0]:p_bracket[1]+1]
-        s_region = psal[p_bracket[0]:p_bracket[1]+1]
+        # near = args.pressure_buffer # dbar on either side of the level or integration region
+        # places = args.pressure_index_buffer # make sure we're keeping at least 5 levels above and below the ROI
+        # if p_interp:
+        #     p_bracket = helpers.pad_bracket(pres, p_interp, p_interp, near, places)
+        # elif p_range:
+        #     p_bracket = helpers.pad_bracket(pres, p_range[0], p_range[1], near, places)
+        # p_region = pres[p_bracket[0]:p_bracket[1]+1]
+        # t_region = temp[p_bracket[0]:p_bracket[1]+1]
+        # s_region = psal[p_bracket[0]:p_bracket[1]+1]
 
         # degenerate pressure levels ruin the interpolation, bail out if found
         if helpers.has_repeated_elements(p_region):

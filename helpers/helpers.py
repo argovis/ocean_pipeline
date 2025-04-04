@@ -83,6 +83,26 @@ def pad_bracket(lst, low_roi, high_roi, buffer, places):
 
     return low, high
 
+def interpolate_to_levels(row, var, levels, pressure_buffer=100.0, pressure_index_buffer=5):
+    # interpolate <var> to <levels> using PCHIP interpolation
+    # keep <pressure_buffer> dbar on either side of the ROI and <pressure_index_buffer> points in the pressure buffer margins, at least.
+
+    try:
+        # find indexes of ROI
+        p_bracket = pad_bracket(row['pressure'], levels[0], levels[-1], pressure_buffer, pressure_index_buffer)
+
+        # interpolate; don't extrapolate to levels outside of measurement range
+        interp = scipy.interpolate.PchipInterpolator(row['pressure'][p_bracket[0]:p_bracket[1]+1], row[var][p_bracket[0]:p_bracket[1]+1], extrapolate=False)(levels)
+
+        # if there wasn't a measured level within a certain radius of each level of interest, mask the interpolation at that level.
+        interp = mask_far_interps(row['pressure'][p_bracket[0]:p_bracket[1]+1], levels, interp)
+        
+    except Exception as e:
+        print(f'pchip interpolation failed at {var}, {row["juld"]}, {row["latitude"]}, {row["longitude"]}: {e}')
+        interp = 0xDEADBEEF
+
+    return interp
+
 def interpolate_and_integrate(pressures, temperatures, low_roi, high_roi):
     # perform a trapezoidal integration with pressures=x and temperatures=y, from pressure==low_roi to high_roi
 
@@ -95,6 +115,14 @@ def interpolate_and_integrate(pressures, temperatures, low_roi, high_roi):
 
     return scipy.integrate.trapezoid(t_integration, x=p_integration)
 
+def integrate_roi(pressure, variable, low_roi, high_roi):
+    # trapezoidal integration of <variable> over <pressure> from <low_roi> to <high_roi>.
+    # will error out if <low_roi> and/or <high_roi> are not found in <pressure>.
+
+    low_i = int(numpy.where(pressure == low_roi)[0][0])
+    high_i = int(numpy.where(pressure == high_roi)[0][0])
+    print(variable, pressure, low_i, high_i)
+    return scipy.integrate.trapezoid(variable[low_i:high_i+1], x=pressure[low_i:high_i+1])
 
 # def filterQC(t,s,p, t_qc,s_qc,p_qc, acceptable):
 #     # given <t>emperature, <s>alinity and <p>ressure lists for a profile,
@@ -148,3 +176,24 @@ def mask_far_interps(measured_pressures, interp_levels, interp_values, radius=15
             interp_values[i] = numpy.nan
 
     return interp_values
+
+def integration_regions(regions, pressure, variable):
+    # perform intrgation of <variable> over <pressure> for a list of <regions> specified as tuples of (low_roi, high_roi)
+
+    integrals = []
+    for region in regions:
+        low_roi, high_roi = region
+        integrals.append(integrate_roi(pressure, variable, low_roi, high_roi))
+
+    return integrals
+
+def integration_comb(regions, spacing=0.2):
+    # generates a level spectrum with <spacing> levels populating the regions in <regions>.
+
+    pressure = []
+
+    for region in regions:
+        low_roi, high_roi = region
+        pressure.extend(numpy.arange(low_roi, high_roi+spacing, spacing))
+    
+    return numpy.round(pressure, 6)
