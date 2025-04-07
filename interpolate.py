@@ -1,7 +1,7 @@
 import numpy, argparse, pandas, scipy
 from helpers import helpers
 
-# argument setup 
+# argument setup
 def comma_separated_levels(s):
     return [float(item) for item in s.split(',')]
 

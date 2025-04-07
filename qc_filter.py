@@ -2,7 +2,7 @@ import numpy, argparse, glob, pandas
 from wodpy import wod
 from helpers import helpers
 
-# argument setup 
+# argument setup
 parser = argparse.ArgumentParser()
 parser.add_argument("--data_dir", type=str, help="directory with ASCII WOD data")
 args = parser.parse_args()
