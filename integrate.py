@@ -19,7 +19,7 @@ pressure_comb = helpers.integration_comb(args.regions)
 # interpolate everything to specified levels
 for var in args.variables:
     df[[var, 'flag']] = df.apply(
-        lambda row: pandas.Series(helpers.interpolate_to_levels(row, var, args.levels)),
+        lambda row: pandas.Series(helpers.interpolate_to_levels(row, var, pressure_comb)),
         axis=1
     )
 

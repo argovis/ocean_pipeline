@@ -96,13 +96,19 @@ def interpolate_to_levels(row, var, levels, pressure_buffer=100.0, pressure_inde
     # find indexes of ROI
     p_bracket = pad_bracket(pressure, levels[0], levels[-1], pressure_buffer, pressure_index_buffer)
 
-    # interpolate; don't extrapolate to levels outside of measurement range
-    interp = scipy.interpolate.PchipInterpolator(pressure[p_bracket[0]:p_bracket[1]+1], variable[p_bracket[0]:p_bracket[1]+1], extrapolate=False)(levels)
+    # ROI must contain at least two points for Pchip
+    if len(pressure[p_bracket[0]:p_bracket[1]+1]) < 2:
+        interp = numpy.full(len(levels), numpy.nan)
+        flag = flag | 2
+        return interp, flag
+    else:
+        # interpolate; don't extrapolate to levels outside of measurement range
+        interp = scipy.interpolate.PchipInterpolator(pressure[p_bracket[0]:p_bracket[1]+1], variable[p_bracket[0]:p_bracket[1]+1], extrapolate=False)(levels)
 
-    # if there wasn't a measured level within a certain radius of each level of interest, mask the interpolation at that level.
-    interp = mask_far_interps(pressure[p_bracket[0]:p_bracket[1]+1], levels, interp)
+        # if there wasn't a measured level within a certain radius of each level of interest, mask the interpolation at that level.
+        interp = mask_far_interps(pressure[p_bracket[0]:p_bracket[1]+1], levels, interp)
         
-    return interp, flag
+        return interp, flag
 
 def interpolate_and_integrate(pressures, temperatures, low_roi, high_roi):
     # perform a trapezoidal integration with pressures=x and temperatures=y, from pressure==low_roi to high_roi
