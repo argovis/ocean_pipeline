@@ -46,5 +46,5 @@ df['integration_regions'] = df.apply(
 
 # combs can be huge, drop them.
 df = df.drop(columns=args.variables + ['pressure'])
-print(df.head())
+
 df.to_parquet(f"{args.input_file.split('.')[0]}_integrated.parquet", engine='pyarrow')

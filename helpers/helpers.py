@@ -8,11 +8,6 @@ def mljul(year, month, day, time):
 def remap_longitude(longitude):
     # map longitudes onto [20,380)
 
-    # if longitude < 20:
-    #     return longitude+360
-    # else:
-    #     return longitude
-
     while longitude < 20:
         longitude += 360
     while longitude >= 380:
