@@ -1,6 +1,38 @@
 import numpy, pytest, pandas
 from helpers import helpers
 
+def test_filterQCandPressure():
+
+    t = [15,16,17,18,19]
+    s = [30,31,32,33,34]
+    p = [100,101,102,103,104]
+    t_qc = [0,0,1,0,0]
+    s_qc = [0,0,0,1,0]
+    p_qc = [1,0,0,0,0]
+
+    temp,psal,pressure = helpers.filterQCandPressure(t,s,p,t_qc,s_qc,p_qc,[0], 1000)
+    assert temp == [16,19], 'basic filter'
+    assert psal == [31,34], 'basic filter'
+    assert pressure == [101,104], 'basic filter'
+
+    temp,psal,pressure = helpers.filterQCandPressure(t,s,p,t_qc,s_qc,p_qc,[0,1], 1000)
+    assert temp == [15,16,17,18,19], 'multiple acceptable flags'
+    assert psal == [30,31,32,33,34], 'multiple acceptable flags'
+    assert pressure == [100,101,102,103,104], 'multiple acceptable flags'
+
+    temp,psal,pressure = helpers.filterQCandPressure(t,s,p,t_qc,s_qc,p_qc,[1], 1000)
+    assert temp == [], 'no acceptable flags'
+    assert psal == [], 'no acceptable flags'
+    assert pressure == [], 'no acceptable flags'
+
+    temp,psal,pressure = helpers.filterQCandPressure(t,s,p,t_qc,s_qc,p_qc,[0,1], 102)
+    assert temp == [15,16], 'pressure limit'
+    assert psal == [30,31], 'pressure limit'
+    assert pressure == [100,101], 'pressure limit'
+
+def test_mljul():
+    assert numpy.allclose(helpers.mljul(2016, 8, 29, 10 + 5/60 + 24/60/60), 2457629.92041667), 'according to the matlab docs https://www.mathworks.com/help//releases/R2021a/matlab/ref/datetime.juliandate.html'
+
 def test_has_common_non_nan_value():
 
 	x = numpy.array([None, 2, numpy.nan])

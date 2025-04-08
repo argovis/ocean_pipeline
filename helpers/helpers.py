@@ -1,17 +1,9 @@
-import numpy, datetime, scipy.interpolate, scipy.integrate, math, operator
+import numpy, datetime, scipy.interpolate, scipy.integrate, math, operator, juliandate
 
 def mljul(year, month, day, time):
     # compute something appropriate to interpret as matlab's julian day
-
-    # days between Jan 1 0 and Jan 1 1900
-    julday = 693962
-
-    delta = datetime.date(year,month,day) - datetime.date(1900,1,1)
-
-    try:
-        return julday + delta.days + time/24.0
-    except:
-        return julday + delta.days
+    
+    return juliandate.from_gregorian(year, month, day) + time/24
 
 def remap_longitude(longitude):
     # map longitudes onto [20,380)
@@ -140,7 +132,7 @@ def integrate_roi(pressure, variable, low_roi, high_roi):
 #     return t_filter, s_filter, p_filter
 
 def filterQCandPressure(t,s,p, t_qc,s_qc,p_qc, acceptable, pressure):
-
+    # keep only levels where t, psal and p all have <acceptable> qc flags, and pressure is below <pressure>.
     data = list(zip(t,s,p,t_qc,s_qc,p_qc))
     goodTPS = list(filter(lambda level: level[3] in acceptable and level[4] in acceptable and level[5] in acceptable and level[2]<pressure, data))
     t_filter = [x[0] for x in goodTPS]
