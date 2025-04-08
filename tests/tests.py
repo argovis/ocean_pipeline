@@ -128,3 +128,11 @@ def test_integration_comb():
     regions = [(0,10), (20,30)]
 
     assert numpy.allclose(helpers.integration_comb(regions, 0.5), [0,0.5,1,1.5,2,2.5,3,3.5,4,4.5,5,5.5,6,6.5,7,7.5,8,8.5,9,9.5,10, 20,20.5,21,21.5,22,22.5,23,23.5,24,24.5,25,25.5,26,26.5,27,27.5,28,28.5,29,29.5,30]), 'basic comb'
+
+def test_remap_longitude():
+    assert helpers.remap_longitude(0) == 360, 'basic remap'
+    assert helpers.remap_longitude(180) == 180, 'basic remap'
+    assert helpers.remap_longitude(10) == 370, 'basic remap'
+    assert helpers.remap_longitude(379) == 379, 'basic remap'
+    assert helpers.remap_longitude(-180) == 180, 'basic remap'
+    assert helpers.remap_longitude(-360) == 360, 'basic remap'

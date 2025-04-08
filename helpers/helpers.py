@@ -2,16 +2,22 @@ import numpy, datetime, scipy.interpolate, scipy.integrate, math, operator, juli
 
 def mljul(year, month, day, time):
     # compute something appropriate to interpret as matlab's julian day
-    
+
     return juliandate.from_gregorian(year, month, day) + time/24
 
 def remap_longitude(longitude):
     # map longitudes onto [20,380)
 
-    if longitude < 20:
-        return longitude+360
-    else:
-        return longitude
+    # if longitude < 20:
+    #     return longitude+360
+    # else:
+    #     return longitude
+
+    while longitude < 20:
+        longitude += 360
+    while longitude >= 380:
+        longitude -= 360
+    return longitude
 
 def has_common_non_nan_value(list1, list2):
     for i in range(len(list1)):
