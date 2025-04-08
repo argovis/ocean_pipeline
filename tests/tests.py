@@ -112,6 +112,7 @@ def test_interpolate_to_levels():
     df = pandas.DataFrame([profile, degen_profile])
 
     assert numpy.allclose(helpers.interpolate_to_levels(df.iloc[0], 'temperature', [1.5,2.5,3.5,4.5])[0], [15,25,35,45]), 'basic interp'
+    assert numpy.allclose(helpers.interpolate_to_levels(df.iloc[0], 'temperature', [1.5,2.5,3.5,4.5])[1], 0), 'basic interp flagging'
     assert numpy.allclose(helpers.interpolate_to_levels(df.iloc[0], 'temperature', [2,4,6])[0], [20,40, numpy.nan], equal_nan=True), 'dont run off end of insitu data'
     assert numpy.allclose(helpers.interpolate_to_levels(df.iloc[1], 'temperature', [2,4,6])[0], [numpy.nan,40,numpy.nan], equal_nan=True), 'degenerate profile'
     assert numpy.allclose(helpers.interpolate_to_levels(df.iloc[1], 'temperature', [2,4,6])[1], 1), 'degenerate profile flagging'

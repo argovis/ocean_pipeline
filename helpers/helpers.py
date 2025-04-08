@@ -89,10 +89,10 @@ def interpolate_to_levels(row, var, levels, pressure_buffer=100.0, pressure_inde
         if pressure[i] == pressure[i+1]:
             mask[i] = 1
             mask[i+1] = 1
+            flag = flag | 1
     pressure = [pressure[i] for i in range(len(mask)) if mask[i]==0]
     variable = [variable[i] for i in range(len(mask)) if mask[i]==0]
-    flag = flag | 1
-
+    
     # find indexes of ROI
     p_bracket = pad_bracket(pressure, levels[0], levels[-1], pressure_buffer, pressure_index_buffer)
 
