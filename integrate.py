@@ -16,10 +16,10 @@ df = pandas.read_parquet(args.input_file, engine='pyarrow')
 
 pressure_comb = helpers.integration_comb(args.regions)
 
-# interpolate everything to the integration comb
+# interpolate everything to specified levels
 for var in args.variables:
-    df[var] = df.apply(
-        lambda row: helpers.interpolate_to_levels(row, var, pressure_comb),
+    df[[var, 'flag']] = df.apply(
+        lambda row: pandas.Series(helpers.interpolate_to_levels(row, var, args.levels)),
         axis=1
     )
 
@@ -27,10 +27,6 @@ df['pressure'] = df.apply(
     lambda row: pressure_comb,
     axis=1
 )
-
-# drop any profiles where interpolation failed
-df = df[~df.apply(lambda row: any(isinstance(row[col], int) and (row[col]==0xDEADBEEF) for col in args.variables), axis=1)]
-df.reset_index(drop=True, inplace=True)
 
 # integrate over regions
 for var in args.variables:

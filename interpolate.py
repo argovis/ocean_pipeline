@@ -18,8 +18,8 @@ df = pandas.read_parquet(args.input_file, engine='pyarrow')
 
 # interpolate everything to specified levels
 for var in args.variables:
-    df[var] = df.apply(
-        lambda row: helpers.interpolate_to_levels(row, var, args.levels),
+    df[[var, 'flag']] = df.apply(
+        lambda row: pandas.Series(helpers.interpolate_to_levels(row, var, args.levels)),
         axis=1
     )
 
@@ -27,9 +27,5 @@ df['pressure'] = df.apply(
     lambda row: args.levels,
     axis=1
 )
-
-# drop any profiles where interpolation failed
-df = df[~df.apply(lambda row: any(isinstance(row[col], int) and (row[col]==0xDEADBEEF) for col in args.variables), axis=1)]
-df.reset_index(drop=True, inplace=True)
 
 df.to_parquet(f"{args.input_file.split('.')[0]}_interpolated.parquet", engine='pyarrow')

@@ -16,6 +16,7 @@ filetypes = [[] for i in range(12)]
 temps = [[] for i in range(12)]
 psals = [[] for i in range(12)]
 pressures = [[] for i in range(12)]
+flags = [[] for i in range(12)]
 
 for file in files:
     
@@ -46,6 +47,7 @@ for file in files:
         temps[month-1].append(temp)
         psals[month-1].append(psal)
         pressures[month-1].append(pres)
+        flags[month-1].append(0)
 
         if p.is_last_profile_in_file(fid):
             break
@@ -60,7 +62,8 @@ dataframes = [
         'temperature': temps[i],
         'salinity': psals[i],
         'pressure': pressures[i],
-        'filetype': filetypes[i]
+        'filetype': filetypes[i],
+        'flag': flags[i]
     }) for i in range(12)
 ]
 

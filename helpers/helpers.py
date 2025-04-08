@@ -80,21 +80,29 @@ def interpolate_to_levels(row, var, levels, pressure_buffer=100.0, pressure_inde
     # interpolate <var> to <levels> using PCHIP interpolation
     # keep <pressure_buffer> dbar on either side of the ROI and <pressure_index_buffer> points in the pressure buffer margins, at least.
 
-    try:
-        # find indexes of ROI
-        p_bracket = pad_bracket(row['pressure'], levels[0], levels[-1], pressure_buffer, pressure_index_buffer)
+    pressure = row['pressure']
+    variable = row[var]
+    flag = row['flag']
+    ## drop degenerate levels and flag
+    mask = [0]*len(pressure)
+    for i in range(len(pressure)-1):
+        if pressure[i] == pressure[i+1]:
+            mask[i] = 1
+            mask[i+1] = 1
+    pressure = [pressure[i] for i in range(len(mask)) if mask[i]==0]
+    variable = [variable[i] for i in range(len(mask)) if mask[i]==0]
+    flag = flag | 1
 
-        # interpolate; don't extrapolate to levels outside of measurement range
-        interp = scipy.interpolate.PchipInterpolator(row['pressure'][p_bracket[0]:p_bracket[1]+1], row[var][p_bracket[0]:p_bracket[1]+1], extrapolate=False)(levels)
+    # find indexes of ROI
+    p_bracket = pad_bracket(pressure, levels[0], levels[-1], pressure_buffer, pressure_index_buffer)
 
-        # if there wasn't a measured level within a certain radius of each level of interest, mask the interpolation at that level.
-        interp = mask_far_interps(row['pressure'][p_bracket[0]:p_bracket[1]+1], levels, interp)
+    # interpolate; don't extrapolate to levels outside of measurement range
+    interp = scipy.interpolate.PchipInterpolator(pressure[p_bracket[0]:p_bracket[1]+1], variable[p_bracket[0]:p_bracket[1]+1], extrapolate=False)(levels)
+
+    # if there wasn't a measured level within a certain radius of each level of interest, mask the interpolation at that level.
+    interp = mask_far_interps(pressure[p_bracket[0]:p_bracket[1]+1], levels, interp)
         
-    except Exception as e:
-        print(f'pchip interpolation failed at {var}, {row["juld"]}, {row["latitude"]}, {row["longitude"]}: {e}')
-        interp = 0xDEADBEEF
-
-    return interp
+    return interp, flag
 
 def interpolate_and_integrate(pressures, temperatures, low_roi, high_roi):
     # perform a trapezoidal integration with pressures=x and temperatures=y, from pressure==low_roi to high_roi
