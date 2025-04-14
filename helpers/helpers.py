@@ -128,7 +128,6 @@ def integrate_roi(pressure, variable, low_roi, high_roi):
 
     low_i = int(numpy.where(pressure == low_roi)[0][0])
     high_i = int(numpy.where(pressure == high_roi)[0][0])
-    print(variable, pressure, low_i, high_i)
     return scipy.integrate.trapezoid(variable[low_i:high_i+1], x=pressure[low_i:high_i+1])
 
 # def filterQC(t,s,p, t_qc,s_qc,p_qc, acceptable):
@@ -194,13 +193,11 @@ def integration_regions(regions, pressure, variable):
 
     return integrals
 
-def integration_comb(regions, spacing=0.2):
-    # generates a level spectrum with <spacing> levels populating the regions in <regions>.
+def integration_comb(region, spacing=0.2):
+    # generates a level spectrum with <spacing> levels populating the <region>
 
     pressure = []
-
-    for region in regions:
-        low_roi, high_roi = region
-        pressure.extend(numpy.arange(low_roi, high_roi+spacing, spacing))
+    low_roi, high_roi = region
+    pressure.extend(numpy.arange(low_roi, high_roi+spacing, spacing))
     
     return numpy.round(pressure, 6)

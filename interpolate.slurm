@@ -15,4 +15,4 @@ module load anaconda/2023.09
 conda activate wod2mat
 
 cd $SLURM_SUBMIT_DIR
-python interpolate.py --input_file $1 --levels $2 --variables $3
+python interpolate.py --input_file $1 --level $2 --variable $3

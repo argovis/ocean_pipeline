@@ -15,4 +15,4 @@ module load anaconda/2023.09
 conda activate wod2mat
 
 cd $SLURM_SUBMIT_DIR
-python variable_creation.py --input_file $1
+python variable_creation.py --input_file $1 --variable $2

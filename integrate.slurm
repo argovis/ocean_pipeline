@@ -15,4 +15,4 @@ module load anaconda/2023.09
 conda activate wod2mat
 
 cd $SLURM_SUBMIT_DIR
-python integrate.py --input_file $1 --regions $2 --variables $3
+python integrate.py --input_file $1 --region $2 --variable $3
