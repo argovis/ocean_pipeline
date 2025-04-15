@@ -183,15 +183,12 @@ def mask_far_interps(measured_pressures, interp_levels, interp_values, radius=15
 
     return interp_values
 
-def integration_regions(regions, pressure, variable):
+def integration_region(region, pressure, variable):
     # perform intrgation of <variable> over <pressure> for a list of <regions> specified as tuples of (low_roi, high_roi)
+    low_roi, high_roi = region
+    integrals = integrate_roi(pressure, variable, low_roi, high_roi)
 
-    integrals = []
-    for region in regions:
-        low_roi, high_roi = region
-        integrals.append(integrate_roi(pressure, variable, low_roi, high_roi))
-
-    return integrals
+    return [integrals]
 
 def integration_comb(region, spacing=0.2):
     # generates a level spectrum with <spacing> levels populating the <region>

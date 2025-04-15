@@ -119,11 +119,10 @@ def test_interpolate_to_levels():
 
 def test_integration_regions():
 
-    regions = [(0,10), (20,30)]
     pressure = numpy.array([0,2,4,6,8,10,12,14,16,18,20,22,24,26,28,30])
     var = numpy.array([0,1,2,3,4,5,6,7,8,9,10,11,12,13,14,15])
 
-    assert numpy.allclose(helpers.integration_regions(regions, pressure, var), [25, 125]), 'basic integration'
+    assert numpy.allclose(helpers.integration_region([0,10], pressure, var), [25]), 'basic integration'
 
 def test_integration_comb():
 

@@ -19,24 +19,19 @@ df = pandas.read_parquet(args.input_file, engine='pyarrow')
 pressure_comb = helpers.integration_comb(args.region)
 
 # interpolate to comb
-df[[args.variable, 'flag']] = df.apply(
+df[[args.variable+'_comb', 'flag']] = df.apply(
     lambda row: pandas.Series(helpers.interpolate_to_levels(row, args.variable, pressure_comb)),
-    axis=1
-)
-
-df['pressure'] = df.apply(
-    lambda row: pressure_comb,
     axis=1
 )
 
 # integrate over region
 df[args.variable+'_integration'] = df.apply(
-    lambda row: helpers.integration_regions([args.region], row['pressure'], row[args.variable]),
+    lambda row: helpers.integration_region(args.region, pressure_comb, row[args.variable+'_comb']),
     axis=1
 )
 
 # combs can be huge, drop them.
-df = df.drop(columns=[args.variable, 'pressure'])
+df = df.drop(columns=[args.variable+'_comb'])
 
 # dump any rows that failed to integrate
 df = df[~df[args.variable+'_integration'].apply(lambda x: numpy.isnan(x[0]) )].reset_index(drop=True)
