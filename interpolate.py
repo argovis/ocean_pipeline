@@ -19,5 +19,7 @@ df[[args.variable, 'flag']] = df.apply(
     lambda row: pandas.Series(helpers.interpolate_to_levels(row, args.variable, [args.level])),
     axis=1
 )
+# dump any rows that failed to interpolate
+df = df[~df[args.variable].apply(lambda x: numpy.isnan(x[0]) )].reset_index(drop=True)
 
 df.to_parquet(f"{args.input_file.split('.')[0]}_interpolated_{args.variable}_{args.level}.parquet", engine='pyarrow')

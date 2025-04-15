@@ -37,4 +37,7 @@ df[args.variable+'_integration'] = df.apply(
 # combs can be huge, drop them.
 df = df.drop(columns=[args.variable, 'pressure'])
 
-df.to_parquet(f"{args.input_file.split('.')[0]}_integrated_{args.variable}_{','.join([str(x) for x in args.region])}.parquet", engine='pyarrow')
+# dump any rows that failed to integrate
+df = df[~df[args.variable+'_integration'].apply(lambda x: numpy.isnan(x[0]) )].reset_index(drop=True)
+
+df.to_parquet(f"{args.input_file.split('.')[0]}_integrated_{args.variable}_{'_'.join([str(x) for x in args.region])}.parquet", engine='pyarrow')

@@ -201,3 +201,6 @@ def integration_comb(region, spacing=0.2):
     pressure.extend(numpy.arange(low_roi, high_roi+spacing, spacing))
     
     return numpy.round(pressure, 6)
+
+def choose_profile(group):
+    return group.iloc[0]
