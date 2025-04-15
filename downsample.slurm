@@ -4,7 +4,7 @@
 #SBATCH --nodes=1
 #SBATCH --ntasks-per-node=1
 #SBATCH --time=24:00:00
-#SBATCH --job-name=var-wod2mat
+#SBATCH --job-name=downsample-wod2mat
 #SBATCH --output=%x.%j.out
 #SBATCH --mail-type=END
 #SBATCH --mail-user=katie.mills@colorado.edu
@@ -15,4 +15,4 @@ module load anaconda/2023.09
 conda activate wod2mat
 
 cd $SLURM_SUBMIT_DIR
-python variable_creation.py --input_file $1 --variable $2 --output_file $3
+python downsample.py --input_file $1 --output_file $2

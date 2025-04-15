@@ -1,15 +1,25 @@
 declare data_dir=/scratch/alpine/wimi7695/wod/2017
-declare level=100
-declare region='100,150'
-declare variable='potential_temperature'
+declare level=5
+#declare region='100,150'
+declare variable='salinity'
 
 qc_id=$(sbatch --parsable qc.slurm $data_dir)
 
 for i in {1..12}; do
     qcfile=${data_dir}/${i}_QC0_profiles.parquet
-    declare varcreation=$(sbatch --parsable --dependency=afterok:$qc_id variable_creation.slurm $qcfile $variable)
+    varfile=${data_dir}/${i}_${variable}.parquet
+    declare varcreation=$(sbatch --parsable --dependency=afterok:$qc_id variable_creation.slurm $qcfile $variable ${varfile})
 
-    varfile=${data_dir}/${i}_QC0_profiles_${args.variable}.parquet
-    declare interpolation_${i}=$(sbatch --parsable --dependency=afterok:$varcreation interpolate.slurm $varfile $level $variable)
-    declare integration_${i}=$(sbatch --parsable --dependency=afterok:$varcreation integrate.slurm $varfile $region $variable)
+    # interpolation
+    interpfile=${data_dir}/${i}_${variable}_interpolated_${level}.parquet
+    interp_downsampled=${data_dir}/${i}_${variable}_interpolated_${level}_downsampled.parquet
+    declare interpolation_${i}=$(sbatch --parsable --dependency=afterok:$varcreation interpolate.slurm $varfile $level $variable $interpfile)
+    sbatch --dependency=afterok:$interpolation_${i} downsample.slurm $interpfile $interp_downsampled
+    
+    # integration
+    # region_tag = ${region/,/_}
+    # integfile=${data_dir}/${i}_${variable}_integrated_${region_tag}.parquet
+    # integ_downsampled=${data_dir}/${i}_${variable}_integrated_${region_tag}_downsampled.parquet
+    # declare integration_${i}=$(sbatch --parsable --dependency=afterok:$varcreation integrate.slurm $varfile $region $variable $integfile)
+    # sbatch --dependency=afterok:$integration_${i} downsample.slurm $integfile $integ_downsampled
 done

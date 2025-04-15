@@ -3,6 +3,7 @@ from helpers import helpers
 
 parser = argparse.ArgumentParser()
 parser.add_argument("--input_file", type=str, help="parquet file with longitude, latitude, and juld")
+parser.add_argument("--output_file", type=str, help="name of output file, with path.")
 args = parser.parse_args()
 
 df = pandas.read_parquet(args.input_file, engine='pyarrow')
@@ -20,4 +21,4 @@ df_filtered = df_filtered.drop(['lon_bin', 'lat_bin', 'week_bin'], axis=1)
 
 print(len(df_filtered))
 
-df_filtered.to_parquet(f"{args.input_file.split('.')[0]}_downsampled.parquet", engine='pyarrow')
+df_filtered.to_parquet(args.output_file, engine='pyarrow')
