@@ -1,4 +1,4 @@
-import numpy, datetime, scipy.interpolate, scipy.integrate, math, operator, juliandate
+import numpy, datetime, scipy.interpolate, scipy.integrate, math, operator, juliandate, bisect
 
 def mljul(year, month, day, time):
     # compute something appropriate to interpret as matlab's julian day
@@ -203,4 +203,20 @@ def integration_comb(region, spacing=0.2):
     return numpy.round(pressure, 6)
 
 def choose_profile(group):
-    return group.iloc[0]
+    # prefer the highest resolution profile as calculated over the depth range covered by all profiles in the group
+    # allow a slightly lower res profile if it goes deeper
+
+    df = group.copy()
+    shallowest = df['pressure'].apply(lambda lst: lst[-1]).min()
+    df['resolution'] = df['pressure'].apply(lambda lst: len(lst[:bisect.bisect_right(lst, shallowest)])/shallowest)
+
+    preferred = 0
+    for i in range(len(group)):
+        if (
+            df.iloc[i]['resolution'] >= 1.15*df.iloc[preferred]['resolution'] # insurmountably higher resolution, depth is irrelevant
+            or df.iloc[i]['resolution'] > df.iloc[preferred]['resolution'] and df.iloc[i]['pressure'][-1] >= df.iloc[preferred]['pressure'][-1] # slightly higher resolution and deeper
+        ):
+            preferred = i
+
+    return group.iloc[preferred]
+

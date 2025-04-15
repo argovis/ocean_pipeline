@@ -127,9 +127,9 @@ def test_integration_regions():
 
 def test_integration_comb():
 
-    regions = [(0,10), (20,30)]
+    regions = [0,10]
 
-    assert numpy.allclose(helpers.integration_comb(regions, 0.5), [0,0.5,1,1.5,2,2.5,3,3.5,4,4.5,5,5.5,6,6.5,7,7.5,8,8.5,9,9.5,10, 20,20.5,21,21.5,22,22.5,23,23.5,24,24.5,25,25.5,26,26.5,27,27.5,28,28.5,29,29.5,30]), 'basic comb'
+    assert numpy.allclose(helpers.integration_comb(regions, 0.5), [0,0.5,1,1.5,2,2.5,3,3.5,4,4.5,5,5.5,6,6.5,7,7.5,8,8.5,9,9.5,10]), 'basic comb'
 
 def test_remap_longitude():
     assert helpers.remap_longitude(0) == 360, 'basic remap'
@@ -138,3 +138,10 @@ def test_remap_longitude():
     assert helpers.remap_longitude(379) == 379, 'basic remap'
     assert helpers.remap_longitude(-180) == 180, 'basic remap'
     assert helpers.remap_longitude(-360) == 360, 'basic remap'
+
+def test_choose_profile():
+
+    assert helpers.choose_profile(pandas.DataFrame([['a', [2,4,6,8,10]], ['b', [1,2,3,4,5,6,7,8,9,10]] ], columns=['dummy_label', 'pressure']) )['dummy_label'] == 'b', 'choose higher resolution when all else equal'
+    assert helpers.choose_profile(pandas.DataFrame([['a', [1,2,3,4,6,7,8,9,10,11]], ['b', [1,2,3,4,5,6,7,8,9,10]] ], columns=['dummy_label', 'pressure']) )['dummy_label'] == 'a', 'choose slightly lower resolution if it goes deeper'
+    assert helpers.choose_profile(pandas.DataFrame([['a', [1,2,3,4,6]], ['b', [2,4,6,7.1,7.2,7.3,7.4,7.5,7.6,7.7,7.8,7.9,8]] ], columns=['dummy_label', 'pressure']) )['dummy_label'] == 'a', 'levels below the shallowest bottom dont count'
+    assert helpers.choose_profile(pandas.DataFrame([['a', [2,4,6,8,10,100]], ['b', [1,2,3,4,5,6,7,8,9,10]] ], columns=['dummy_label', 'pressure']) )['dummy_label'] == 'b', 'choose higher resolution even when another profile goes deeper'
