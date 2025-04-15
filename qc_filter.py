@@ -16,6 +16,9 @@ filetypes = [[] for i in range(12)]
 temps = [[] for i in range(12)]
 psals = [[] for i in range(12)]
 pressures = [[] for i in range(12)]
+temps_qc = [[] for i in range(12)]
+psals_qc = [[] for i in range(12)]
+pressures_qc = [[] for i in range(12)]
 flags = [[] for i in range(12)]
 
 for file in files:
@@ -25,7 +28,7 @@ for file in files:
     while True:
         # extract and QC filter in situ measurements
         pindex = p.var_index(25)
-        temp,psal,pres = helpers.filterQCandPressure(p.t(), p.s(), p.p(), p.t_level_qc(originator=False), p.s_level_qc(originator=False), p.var_level_qc(pindex), [0], 10000000)
+        temp,psal,pres,temp_qc,psal_qc,pres_qc = helpers.filterQCandPressure(p.t(), p.s(), p.p(), p.t_level_qc(originator=False), p.s_level_qc(originator=False), p.var_level_qc(pindex), [0], 10000000)
         if len(pres) == 0:
             print(p.uid(), 'no data passing QC')
             if p.is_last_profile_in_file(fid):

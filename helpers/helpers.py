@@ -152,8 +152,11 @@ def filterQCandPressure(t,s,p, t_qc,s_qc,p_qc, acceptable, pressure):
     t_filter = [x[0] for x in goodTPS]
     p_filter = [x[2] for x in goodTPS]
     s_filter = [x[1] for x in goodTPS]
+    tqc_filter = [x[3] for x in goodTPS]
+    pqc_filter = [x[5] for x in goodTPS]
+    sqc_filter = [x[4] for x in goodTPS]
 
-    return t_filter, s_filter, p_filter    
+    return t_filter, s_filter, p_filter, tqc_filter, sqc_filter, pqc_filter
 
 def has_repeated_elements(lst):
     for i in range(len(lst) - 1):
