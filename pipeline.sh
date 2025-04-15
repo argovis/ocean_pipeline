@@ -13,13 +13,13 @@ for i in {1..12}; do
     # interpolation
     interpfile=${data_dir}/${i}_${variable}_interpolated_${level}.parquet
     interp_downsampled=${data_dir}/${i}_${variable}_interpolated_${level}_downsampled.parquet
-    declare interpolation_${i}=$(sbatch --parsable --dependency=afterok:$varcreation interpolate.slurm $varfile $level $variable $interpfile)
-    sbatch --dependency=afterok:$interpolation_${i} downsample.slurm $interpfile $interp_downsampled
+    declare interpolation=$(sbatch --parsable --dependency=afterok:$varcreation interpolate.slurm $varfile $level $variable $interpfile)
+    sbatch --dependency=afterok:$interpolation downsample.slurm $interpfile $interp_downsampled
     
     # integration
     # region_tag = ${region/,/_}
     # integfile=${data_dir}/${i}_${variable}_integrated_${region_tag}.parquet
     # integ_downsampled=${data_dir}/${i}_${variable}_integrated_${region_tag}_downsampled.parquet
-    # declare integration_${i}=$(sbatch --parsable --dependency=afterok:$varcreation integrate.slurm $varfile $region $variable $integfile)
-    # sbatch --dependency=afterok:$integration_${i} downsample.slurm $integfile $integ_downsampled
+    # declare integration=$(sbatch --parsable --dependency=afterok:$varcreation integrate.slurm $varfile $region $variable $integfile)
+    # sbatch --dependency=afterok:$integration downsample.slurm $integfile $integ_downsampled
 done
