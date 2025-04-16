@@ -3,7 +3,11 @@ import numpy, datetime, scipy.interpolate, scipy.integrate, math, operator, juli
 def mljul(year, month, day, time):
     # compute something appropriate to interpret as matlab's julian day
 
-    return juliandate.from_gregorian(year, month, day) + time/24
+    julian = juliandate.from_gregorian(year, month, day)
+    if time is None or numpy.isnan(julian):
+        return julian
+    else:
+        return julian + time/24
 
 def remap_longitude(longitude):
     # map longitudes onto [20,380)

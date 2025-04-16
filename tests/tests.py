@@ -44,6 +44,7 @@ def test_filterQCandPressure():
 
 def test_mljul():
     assert numpy.allclose(helpers.mljul(2016, 8, 29, 10 + 5/60 + 24/60/60), 2457629.92041667), 'according to the matlab docs https://www.mathworks.com/help//releases/R2021a/matlab/ref/datetime.juliandate.html'
+    assert numpy.allclose(helpers.mljul(2016, 8, 29, None), 2457629.5), 'deal with None for time'
 
 def test_has_common_non_nan_value():
 
