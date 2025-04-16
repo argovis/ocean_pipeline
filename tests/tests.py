@@ -156,3 +156,6 @@ def test_choose_profile():
     assert helpers.choose_profile(pandas.DataFrame([['a', [1,2,3,4,6,7,8,9,10,11]], ['b', [1,2,3,4,5,6,7,8,9,10]] ], columns=['dummy_label', 'pressure']) )['dummy_label'] == 'a', 'choose slightly lower resolution if it goes deeper'
     assert helpers.choose_profile(pandas.DataFrame([['a', [1,2,3,4,6]], ['b', [2,4,6,7.1,7.2,7.3,7.4,7.5,7.6,7.7,7.8,7.9,8]] ], columns=['dummy_label', 'pressure']) )['dummy_label'] == 'a', 'levels below the shallowest bottom dont count'
     assert helpers.choose_profile(pandas.DataFrame([['a', [2,4,6,8,10,100]], ['b', [1,2,3,4,5,6,7,8,9,10]] ], columns=['dummy_label', 'pressure']) )['dummy_label'] == 'b', 'choose higher resolution even when another profile goes deeper'
+
+def test_merge_qc():
+    assert helpers.merge_qc([[0,0,0], [0,0,2], [0,0,1]]) == [0,0,2], 'basic merge'

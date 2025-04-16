@@ -220,3 +220,5 @@ def choose_profile(group):
 
     return group.iloc[preferred]
 
+def merge_qc(qc_lists):
+    return [max(column) for column in zip(*qc_lists)]

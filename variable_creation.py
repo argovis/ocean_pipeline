@@ -18,6 +18,11 @@ if args.variable in ['absolute_salinity', 'potential_temperature', 'conservative
         axis=1
     )
 
+    df['absolute_salinity_qc'] = df.apply(
+        lambda row: helpers.merge_qc([row['salinity_qc'], row['pressure_qc']]),
+        axis=1
+    )
+
 if args.variable == 'potential_temperature':
     df['potential_temperature'] = df.apply(
         lambda row: gsw.conversions.pt0_from_t(
@@ -26,6 +31,11 @@ if args.variable == 'potential_temperature':
         axis=1
     )
     df['potential_temperature'] = df['potential_temperature'] + 273.15
+
+    df['potential_temperature_qc'] = df.apply(
+        lambda row: helpers.merge_qc([row['salinity_qc'], row['temperature_qc'], row['pressure_qc']]),
+        axis=1
+    )
 
 if args.variable == 'conservative_temperature':
     df['conservative_temperature'] = df.apply(
@@ -36,4 +46,9 @@ if args.variable == 'conservative_temperature':
     )
     df['conservative_temperature'] = df['conservative_temperature'] + 273.15
 
+    df['conservative_temperature_qc'] = df.apply(
+        lambda row: helpers.merge_qc([row['salinity_qc'], row['temperature_qc'], row['pressure_qc']]),
+        axis=1
+    )
+    
 df.to_parquet(args.output_file, engine='pyarrow')

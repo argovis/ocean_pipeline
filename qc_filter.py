@@ -36,6 +36,10 @@ for file in files:
             else:
                 p = wod.WodProfile(fid)
             continue
+
+        # assign the worst QC flag of x and pressure to x where x is temperature or salinity
+        temp_qc = helpers.merge_qc([temp_qc, pres_qc])
+        psal_qc = helpers.merge_qc([psal_qc, pres_qc])
         
         filetype = file.split('/')[-1][0:3]
         juld = helpers.mljul(p.year(),p.month(),p.day(),p.time())
@@ -50,6 +54,9 @@ for file in files:
         temps[month-1].append(temp)
         psals[month-1].append(psal)
         pressures[month-1].append(pres)
+        temps_qc[month-1].append(temp_qc)
+        psals_qc[month-1].append(psal_qc)
+        pressures_qc[month-1].append(pres_qc)
         flags[month-1].append(0)
 
         if p.is_last_profile_in_file(fid):
@@ -63,8 +70,11 @@ dataframes = [
         'longitude': lons[i],
         'latitude': lats[i],
         'temperature': temps[i],
+        'temperature_qc': temps_qc[i],
         'salinity': psals[i],
+        'salinity_qc': psals_qc[i],
         'pressure': pressures[i],
+        'pressure_qc': pressures_qc[i],
         'filetype': filetypes[i],
         'flag': flags[i]
     }) for i in range(12)
