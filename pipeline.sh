@@ -1,4 +1,4 @@
-declare data_dir=/scratch/alpine/wimi7695/wod/2017
+declare data_dir=$1
 declare level=5
 #declare region='100,150'
 declare variable='salinity'
@@ -6,6 +6,7 @@ declare variable='salinity'
 qc_id=$(sbatch --parsable qc.slurm $data_dir)
 
 for i in {1..12}; do
+    rm ${data_dir}/*.parquet
     qcfile=${data_dir}/${i}_QC0_profiles.parquet
     varfile=${data_dir}/${i}_${variable}.parquet
     declare varcreation=$(sbatch --parsable --dependency=afterok:$qc_id variable_creation.slurm $qcfile $variable ${varfile})

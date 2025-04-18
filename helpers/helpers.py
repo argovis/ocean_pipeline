@@ -85,18 +85,19 @@ def interpolate_to_levels(row, var, levels, pressure_buffer=100.0, pressure_inde
     # keep <pressure_buffer> dbar on either side of the ROI and <pressure_index_buffer> points in the pressure buffer margins, at least.
 
     pressure = row['pressure']
+
     variable = row[var]
     flag = row['flag']
-    ## drop degenerate levels and flag
+    ## drop degenerate and reversed levels and flag
     mask = [0]*len(pressure)
     for i in range(len(pressure)-1):
-        if pressure[i] == pressure[i+1]:
+        if pressure[i] >= pressure[i+1]:
             mask[i] = 1
             mask[i+1] = 1
             flag = flag | 1
     pressure = [pressure[i] for i in range(len(mask)) if mask[i]==0]
     variable = [variable[i] for i in range(len(mask)) if mask[i]==0]
-    
+
     # find indexes of ROI
     p_bracket = pad_bracket(pressure, levels[0], levels[-1], pressure_buffer, pressure_index_buffer)
 
