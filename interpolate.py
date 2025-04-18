@@ -16,7 +16,7 @@ args = parser.parse_args()
 df = pandas.read_parquet(args.input_file, engine='pyarrow')
 
 # interpolate everything to specified level
-df[[args.variable, 'flag']] = df.apply(
+df[[args.variable+'_interpolation', 'flag']] = df.apply(
     lambda row: pandas.Series(helpers.interpolate_to_levels(row, args.variable, [args.level])),
     axis=1
 )
