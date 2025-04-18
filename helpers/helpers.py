@@ -80,23 +80,52 @@ def pad_bracket(lst, low_roi, high_roi, buffer, places):
 
     return low, high
 
-def interpolate_to_levels(row, var, levels, pressure_buffer=100.0, pressure_index_buffer=5):
-    # interpolate <var> to <levels> using PCHIP interpolation
-    # keep <pressure_buffer> dbar on either side of the ROI and <pressure_index_buffer> points in the pressure buffer margins, at least.
+def tidy_profile(pressure, var, flag):
+    # pchip needs pressures to be monotonically increasing; WOD needs some tidying in this regard.
+    # flags (little endian):
+    # 1: degenerate adjacent levels
+    # 2: levels in reverse order
+    # 4: levels non-monotonic, had to sort
 
-    pressure = row['pressure']
-
-    variable = row[var]
-    flag = row['flag']
-    ## drop degenerate and reversed levels and flag
+    ## drop degenerate levels and flag
     mask = [0]*len(pressure)
     for i in range(len(pressure)-1):
-        if pressure[i] >= pressure[i+1]:
+        if pressure[i] == pressure[i+1]:
             mask[i] = 1
             mask[i+1] = 1
             flag = flag | 1
-    pressure = [pressure[i] for i in range(len(mask)) if mask[i]==0]
-    variable = [variable[i] for i in range(len(mask)) if mask[i]==0]
+    p = [pressure[i] for i in range(len(mask)) if mask[i]==0]
+    v = [var[i] for i in range(len(mask)) if mask[i]==0]
+
+    if all(p[i] < p[i + 1] for i in range(len(p) - 1)):
+        # pressure is monotonically increasing, return
+        return p, v, flag
+
+    if all(p[i] > p[i + 1] for i in range(len(p) - 1)):
+        # pressure is monotonically decreasing, reverse and return
+        flag = flag | 2
+        return p[::-1], v[::-1], flag
+
+    # pressure is non-monotonic, sort and try again
+    x = sorted(zip(p,v))
+    p = [element[0] for element in x]
+    v = [element[1] for element in x]
+    flag = flag | 4
+    return tidy_profile(p,v,flag)
+
+
+def interpolate_to_levels(row, var, levels, pressure_buffer=100.0, pressure_index_buffer=5):
+    # interpolate <var> to <levels> using PCHIP interpolation
+    # keep <pressure_buffer> dbar on either side of the ROI and <pressure_index_buffer> points in the pressure buffer margins, at least.
+    # flag 8 (little endian): ROI didn't contain enough info to interpolate
+
+    pressure, variable, flag = tidy_profile(row['pressure'], row[var], row['flag'])
+
+    # some truly pathological profiles will have no levels left at this point
+    if len(pressure) == 0:
+        interp = numpy.full(len(levels), numpy.nan)
+        flag = flag | 8
+        return interp, flag
 
     # find indexes of ROI
     p_bracket = pad_bracket(pressure, levels[0], levels[-1], pressure_buffer, pressure_index_buffer)
@@ -104,7 +133,7 @@ def interpolate_to_levels(row, var, levels, pressure_buffer=100.0, pressure_inde
     # ROI must contain at least two points for Pchip
     if len(pressure[p_bracket[0]:p_bracket[1]+1]) < 2:
         interp = numpy.full(len(levels), numpy.nan)
-        flag = flag | 2
+        flag = flag | 8
         return interp, flag
     else:
         # interpolate; don't extrapolate to levels outside of measurement range
@@ -112,7 +141,7 @@ def interpolate_to_levels(row, var, levels, pressure_buffer=100.0, pressure_inde
 
         # if there wasn't a measured level within a certain radius of each level of interest, mask the interpolation at that level.
         interp = mask_far_interps(pressure[p_bracket[0]:p_bracket[1]+1], levels, interp)
-        
+
         return interp, flag
 
 def interpolate_and_integrate(pressures, temperatures, low_roi, high_roi):

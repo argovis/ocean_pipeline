@@ -20,9 +20,10 @@ temps_qc = [[] for i in range(12)]
 psals_qc = [[] for i in range(12)]
 pressures_qc = [[] for i in range(12)]
 flags = [[] for i in range(12)]
+uids = [[] for i in range(12)]
 
 for file in files:
-    
+
     fid = open(file)
     p = wod.WodProfile(fid)
     while True:
@@ -40,12 +41,13 @@ for file in files:
         # assign the worst QC flag of x and pressure to x where x is temperature or salinity
         temp_qc = helpers.merge_qc([temp_qc, pres_qc])
         psal_qc = helpers.merge_qc([psal_qc, pres_qc])
-        
+
         filetype = file.split('/')[-1][0:3]
         juld = helpers.mljul(p.year(),p.month(),p.day(),p.time())
         month = p.month()
         lat = p.latitude()
         lon = helpers.remap_longitude(p.longitude())
+        uid = p.uid()
 
         julds[month-1].append(juld)
         lats[month-1].append(lat)
@@ -58,6 +60,7 @@ for file in files:
         psals_qc[month-1].append(psal_qc)
         pressures_qc[month-1].append(pres_qc)
         flags[month-1].append(0)
+        uids[month-1].append(uid)
 
         if p.is_last_profile_in_file(fid):
             break
@@ -66,6 +69,7 @@ for file in files:
 
 dataframes = [
     pandas.DataFrame({
+        'uid': uids[i],
         'juld': julds[i],
         'longitude': lons[i],
         'latitude': lats[i],
