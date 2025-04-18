@@ -160,3 +160,8 @@ def test_choose_profile():
 
 def test_merge_qc():
     assert helpers.merge_qc([[0,0,0], [0,0,2], [0,0,1]]) == [0,0,2], 'basic merge'
+
+def test_tidy_profile():
+    assert helpers.tidy_profile([1,2,3,3,4], [6,7,8,9,10], 0) == ([1,2,4], [6,7,10], 1), 'mask degen neighbors'
+    assert helpers.tidy_profile([6,5,4,3],[2,5,3,4], 0) == ([3,4,5,6], [4,3,5,2], 2), 'levels in reverse order'
+    assert helpers.tidy_profile([1,2,4,3,5], [6,1,4,2,9], 0) == ([1,2,3,4,5], [6,1,2,4,9], 4), 'levels out of order'
