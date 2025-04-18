@@ -9,5 +9,14 @@ args = parser.parse_args()
 
 df = pandas.read_parquet(args.input_file, engine='pyarrow')
 
-#dict_keys(['uid', 'juld', 'longitude', 'latitude', 'temperature', 'temperature_qc', 'salinity', 'salinity_qc', 'pressure', 'pressure_qc', 'filetype', 'flag'])
-print(df.to_dict(orient='list')['flag'])
+dict = {
+    'profVariableAggrMonth': [float(x[0]) for x in df.to_dict(orient='list')['salinity_interpolation']],
+    'profLatAggrMonth': df.to_dict(orient='list')['latitude'],
+    'profLongAggrMonth': df.to_dict(orient='list')['longitude'],
+    'profFloatIDAggrMonth': [0]*len(df.to_dict(orient='list')['longitude']),
+    'profObsIDAggrMonth': df.to_dict(orient='list')['uid'],
+    'profJulDayAggrMonth': df.to_dict(orient='list')['juld'],
+    'profUncertaintyAggrMonth': [float("nan")]*len(df.to_dict(orient='list')['longitude']),
+}
+
+scipy.io.savemat(args.output_file, dict)

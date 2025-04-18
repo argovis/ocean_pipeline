@@ -15,13 +15,17 @@ for i in {1..12}; do
     # interpolation
     interpfile=${data_dir}/${i}_${variable}_interpolated_${level}.parquet
     interp_downsampled=${data_dir}/${i}_${variable}_interpolated_${level}_downsampled.parquet
+    interp_matlab=${data_dir}/${i}_${variable}_interpolated_${level}.mat
     declare interpolation=$(sbatch --parsable --dependency=afterok:$varcreation interpolate.slurm $varfile $level $variable $interpfile)
-    sbatch --dependency=afterok:$interpolation downsample.slurm $interpfile $interp_downsampled
+    declare downsample=$(sbatch --parsable --dependency=afterok:$interpolation downsample.slurm $interpfile $interp_downsampled)
+    sbatch --dependency=afterok:$downsample matlab.slurm $interp_downsampled $interp_matlab $variable
     
     # integration
     # region_tag = ${region/,/_}
     # integfile=${data_dir}/${i}_${variable}_integrated_${region_tag}.parquet
     # integ_downsampled=${data_dir}/${i}_${variable}_integrated_${region_tag}_downsampled.parquet
+    # integ_matlab=${data_dir}/${i}_${variable}_integrated_${region_tag}.mat
     # declare integration=$(sbatch --parsable --dependency=afterok:$varcreation integrate.slurm $varfile $region $variable $integfile)
-    # sbatch --dependency=afterok:$integration downsample.slurm $integfile $integ_downsampled
+    # declare downsample=$(sbatch --parsable --dependency=afterok:$integration downsample.slurm $integfile $integ_downsampled)
+    # sbatch --dependency=afterok:$downsample matlab.slurm $integ_downsampled $integ_matlab $variable
 done
