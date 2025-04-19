@@ -15,4 +15,4 @@ module load anaconda/2023.09
 conda activate wod2mat
 
 cd $SLURM_SUBMIT_DIR
-python qc_filter.py --data_dir $1
+python qc_filter.py --data_dir $1 --pressure_qc $2 --temperature_qc $3 --salinity_qc $4

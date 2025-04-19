@@ -1,16 +1,18 @@
 declare data_dir=$1
 declare level=5
+declare pqc=0
+declare tqc=0
+declare sqc='0,1'
 #declare region='100,150'
 declare variable='salinity'
 
-#qc_id=$(sbatch --parsable qc.slurm $data_dir)
+qc_id=$(sbatch --parsable qc.slurm $data_dir $pqc $tqc $sqc)
 
 for i in {1..12}; do
     #rm ${data_dir}/*.parquet
     qcfile=${data_dir}/${i}_QC0_profiles.parquet
     varfile=${data_dir}/${i}_${variable}.parquet
-    #declare varcreation=$(sbatch --parsable --dependency=afterok:$qc_id variable_creation.slurm $qcfile $variable ${varfile})
-    declare varcreation=$(sbatch --parsable variable_creation.slurm $qcfile $variable ${varfile})
+    declare varcreation=$(sbatch --parsable --dependency=afterok:$qc_id variable_creation.slurm $qcfile $variable ${varfile})
 
     # interpolation
     interpfile=${data_dir}/${i}_${variable}_interpolated_${level}.parquet

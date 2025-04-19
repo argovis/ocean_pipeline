@@ -10,7 +10,7 @@ def test_filterQCandPressure():
     s_qc = [0,0,0,1,0]
     p_qc = [1,0,0,0,0]
 
-    temp,psal,pressure,temp_qc,psal_qc,pres_qc = helpers.filterQCandPressure(t,s,p,t_qc,s_qc,p_qc,[0], 1000)
+    temp,psal,pressure,temp_qc,psal_qc,pres_qc = helpers.filterQCandPressure(t,s,p,t_qc,s_qc,p_qc,[0],[0],[0], 1000)
     assert temp == [16,19], 'basic filter'
     assert psal == [31,34], 'basic filter'
     assert pressure == [101,104], 'basic filter'
@@ -18,7 +18,7 @@ def test_filterQCandPressure():
     assert psal_qc == [0,0], 'basic filter'
     assert pres_qc == [0,0], 'basic filter'
 
-    temp,psal,pressure,temp_qc,psal_qc,pres_qc = helpers.filterQCandPressure(t,s,p,t_qc,s_qc,p_qc,[0,1], 1000)
+    temp,psal,pressure,temp_qc,psal_qc,pres_qc = helpers.filterQCandPressure(t,s,p,t_qc,s_qc,p_qc,[0,1],[0,1],[0,1], 1000)
     assert temp == [15,16,17,18,19], 'multiple acceptable flags'
     assert psal == [30,31,32,33,34], 'multiple acceptable flags'
     assert pressure == [100,101,102,103,104], 'multiple acceptable flags'
@@ -26,7 +26,7 @@ def test_filterQCandPressure():
     assert psal_qc == [0,0,0,1,0], 'multiple acceptable flags'
     assert pres_qc == [1,0,0,0,0], 'multiple acceptable flags'
 
-    temp,psal,pressure,temp_qc,psal_qc,pres_qc = helpers.filterQCandPressure(t,s,p,t_qc,s_qc,p_qc,[1], 1000)
+    temp,psal,pressure,temp_qc,psal_qc,pres_qc = helpers.filterQCandPressure(t,s,p,t_qc,s_qc,p_qc,[1],[1],[1], 1000)
     assert temp == [], 'no acceptable flags'
     assert psal == [], 'no acceptable flags'
     assert pressure == [], 'no acceptable flags'
@@ -34,13 +34,22 @@ def test_filterQCandPressure():
     assert psal_qc == [], 'no acceptable flags'
     assert pres_qc == [], 'no acceptable flags'
 
-    temp,psal,pressure,temp_qc,psal_qc,pres_qc = helpers.filterQCandPressure(t,s,p,t_qc,s_qc,p_qc,[0,1], 102)
+    temp,psal,pressure,temp_qc,psal_qc,pres_qc = helpers.filterQCandPressure(t,s,p,t_qc,s_qc,p_qc,[0,1],[0,1],[0,1], 102)
     assert temp == [15,16], 'pressure limit'
     assert psal == [30,31], 'pressure limit'
     assert pressure == [100,101], 'pressure limit'
     assert temp_qc == [0,0], 'pressure limit'
     assert psal_qc == [0,0], 'pressure limit'
     assert pres_qc == [1,0], 'pressure limit'
+
+    temp,psal,pressure,temp_qc,psal_qc,pres_qc = helpers.filterQCandPressure(t,s,p,t_qc,s_qc,p_qc,[0],[0],[0,1], 1000)
+    assert temp == [16,18,19], 'pressure limit'
+    assert psal == [31,33,34], 'pressure limit'
+    assert pressure == [101,103,104], 'pressure limit'
+    assert temp_qc == [0,0,0], 'pressure limit'
+    assert psal_qc == [0,1,0], 'pressure limit'
+    assert pres_qc == [0,0,0], 'pressure limit'
+
 
 def test_mljul():
     assert numpy.allclose(helpers.mljul(2016, 8, 29, 10 + 5/60 + 24/60/60), 2457629.92041667), 'according to the matlab docs https://www.mathworks.com/help//releases/R2021a/matlab/ref/datetime.juliandate.html'

@@ -179,10 +179,10 @@ def integrate_roi(pressure, variable, low_roi, high_roi):
 
 #     return t_filter, s_filter, p_filter
 
-def filterQCandPressure(t,s,p, t_qc,s_qc,p_qc, acceptable, pressure):
-    # keep only levels where t, psal and p all have <acceptable> qc flags, and pressure is below <pressure>.
+def filterQCandPressure(t,s,p, t_qc,s_qc,p_qc, pressure_qc, temperature_qc, salinity_qc, pressure):
+    # keep only levels where p, t and psal have qc flags found in <pressure_qc>, <temperature_qc>, and <salinity_qc> respectively, and pressure is below <pressure>.
     data = list(zip(t,s,p,t_qc,s_qc,p_qc))
-    goodTPS = list(filter(lambda level: level[3] in acceptable and level[4] in acceptable and level[5] in acceptable and level[2]<pressure, data))
+    goodTPS = list(filter(lambda level: level[3] in temperature_qc and level[4] in salinity_qc and level[5] in pressure_qc and level[2]<pressure, data))
     t_filter = [x[0] for x in goodTPS]
     p_filter = [x[2] for x in goodTPS]
     s_filter = [x[1] for x in goodTPS]

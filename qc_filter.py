@@ -2,9 +2,15 @@ import numpy, argparse, glob, pandas
 from wodpy import wod
 from helpers import helpers
 
+def parse_list(s):
+    return [int(x) for x in s.split(',')]
+
 # argument setup
 parser = argparse.ArgumentParser()
 parser.add_argument("--data_dir", type=str, help="directory with ASCII WOD data")
+parser.add_argument("--temperature_qc", type=parse_list, nargs='+', help="temperature QC flag to accept")
+parser.add_argument("--salinity_qc", type=parse_list, nargs='+', help="salinity QC flag to accept")
+parser.add_argument("--pressure_qc", type=parse_list, nargs='+', help="pressure QC flag to accept")
 args = parser.parse_args()
 
 files = glob.glob(args.data_dir + '/*')
@@ -29,7 +35,7 @@ for file in files:
     while True:
         # extract and QC filter in situ measurements
         pindex = p.var_index(25)
-        temp,psal,pres,temp_qc,psal_qc,pres_qc = helpers.filterQCandPressure(p.t(), p.s(), p.p(), p.t_level_qc(originator=False), p.s_level_qc(originator=False), p.var_level_qc(pindex), [0], 10000000)
+        temp,psal,pres,temp_qc,psal_qc,pres_qc = helpers.filterQCandPressure(p.t(), p.s(), p.p(), p.t_level_qc(originator=False), p.s_level_qc(originator=False), p.var_level_qc(pindex), args.pressure_qc, args.temperature_qc, args.salinity_qc, 10000000)
         if len(pres) == 0:
             print(p.uid(), 'no data passing QC')
             if p.is_last_profile_in_file(fid):
@@ -85,4 +91,4 @@ dataframes = [
 ]
 
 for i in range(12):
-    dataframes[i].to_parquet(f"{args.data_dir}/{i+1}_QC0_profiles.parquet", engine='pyarrow')
+    dataframes[i].to_parquet(f"{args.data_dir}/{i+1}_p{'_'.join([str(x) for x in args.pressure_qc])}_t{'_'.join([str(x) for x in args.temperature_qc])}_s{'_'.join([str(x) for x in args.salinity_qc])}_profiles.parquet", engine='pyarrow')
