@@ -9,8 +9,9 @@ declare variable='salinity'
 qc_id=$(sbatch --parsable qc.slurm $data_dir $pqc $tqc $sqc)
 
 for i in {1..12}; do
-    #rm ${data_dir}/*.parquet
-    qcfile=${data_dir}/${i}_QC0_profiles.parquet
+    rm ${data_dir}/*.parquet
+    rm ${data_dir}/*.mat
+    qcfile=${data_dir}/${i}_p${pqc//,/_}_t${tqc//,/_}_s${sqc//,/_}_profiles.parquet
     varfile=${data_dir}/${i}_${variable}.parquet
     declare varcreation=$(sbatch --parsable --dependency=afterok:$qc_id variable_creation.slurm $qcfile $variable ${varfile})
 
