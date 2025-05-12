@@ -5,15 +5,21 @@ from helpers import helpers
 def parse_list(s):
     return [int(x) for x in s.split(',')]
 
+def strlist(s):
+    return [str(x) for x in s.split(',')]
+
 # argument setup
 parser = argparse.ArgumentParser()
 parser.add_argument("--data_dir", type=str, help="directory with ASCII WOD data")
+parser.add_argument("--filetypes", type=strlist, help="WOD file types as a CSV string, like 'PFL,MRB,CTD'....")
 parser.add_argument("--temperature_qc", type=parse_list, help="temperature QC flag to accept")
 parser.add_argument("--salinity_qc", type=parse_list, help="salinity QC flag to accept")
 parser.add_argument("--pressure_qc", type=parse_list, help="pressure QC flag to accept")
 args = parser.parse_args()
 
-files = glob.glob(args.data_dir + '/*PFL*')
+files = []
+for filetype in args.filetypes:
+    files.extend(glob.glob(args.data_dir + '/*'+filetype+'*'))
 
 julds = [[] for i in range(12)]
 lats = [[] for i in range(12)]
