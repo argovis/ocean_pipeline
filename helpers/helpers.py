@@ -82,20 +82,31 @@ def pad_bracket(lst, low_roi, high_roi, buffer, places):
 
 def tidy_profile(pressure, var, flag):
     # pchip needs pressures to be monotonically increasing; WOD needs some tidying in this regard.
+    # also need the dependent variable to always be defined
     # flags (little endian):
     # 1: degenerate adjacent levels
     # 2: levels in reverse order
-    # 4: levels non-monotonic, had to sort
+    # 4: variable of interest was NaN, masked
+    # 8: levels non-monotonic, had to sort
+
+    ## dependent variable must be defined
+    mask = [0]*len(var)
+    for i in range(len(var)):
+        if var[i] is None or math.isnan(var[i]):
+            mask[i] = 1
+            flag = flag | 4
+    p = [pressure[i] for i in range(len(mask)) if mask[i]==0]
+    v = [var[i] for i in range(len(mask)) if mask[i]==0]
 
     ## drop degenerate levels and flag
-    mask = [0]*len(pressure)
-    for i in range(len(pressure)-1):
-        if pressure[i] == pressure[i+1]:
+    mask = [0]*len(p)
+    for i in range(len(p)-1):
+        if p[i] == p[i+1]:
             mask[i] = 1
             mask[i+1] = 1
             flag = flag | 1
-    p = [pressure[i] for i in range(len(mask)) if mask[i]==0]
-    v = [var[i] for i in range(len(mask)) if mask[i]==0]
+    p = [p[i] for i in range(len(mask)) if mask[i]==0]
+    v = [v[i] for i in range(len(mask)) if mask[i]==0]
 
     if all(p[i] < p[i + 1] for i in range(len(p) - 1)):
         # pressure is monotonically increasing, return
@@ -110,21 +121,21 @@ def tidy_profile(pressure, var, flag):
     x = sorted(zip(p,v))
     p = [element[0] for element in x]
     v = [element[1] for element in x]
-    flag = flag | 4
+    flag = flag | 8
     return tidy_profile(p,v,flag)
 
 
 def interpolate_to_levels(row, var, levels, pressure_buffer=100.0, pressure_index_buffer=5):
     # interpolate <var> to <levels> using PCHIP interpolation
     # keep <pressure_buffer> dbar on either side of the ROI and <pressure_index_buffer> points in the pressure buffer margins, at least.
-    # flag 8 (little endian): ROI didn't contain enough info to interpolate
+    # flag 16 (little endian): ROI didn't contain enough info to interpolate
 
     pressure, variable, flag = tidy_profile(row['pressure'], row[var], row['flag'])
 
     # some truly pathological profiles will have no levels left at this point
     if len(pressure) == 0:
         interp = numpy.full(len(levels), numpy.nan)
-        flag = flag | 8
+        flag = flag | 16
         return interp, flag
 
     # find indexes of ROI
@@ -133,7 +144,7 @@ def interpolate_to_levels(row, var, levels, pressure_buffer=100.0, pressure_inde
     # ROI must contain at least two points for Pchip
     if len(pressure[p_bracket[0]:p_bracket[1]+1]) < 2:
         interp = numpy.full(len(levels), numpy.nan)
-        flag = flag | 8
+        flag = flag | 16
         return interp, flag
     else:
         # interpolate; don't extrapolate to levels outside of measurement range

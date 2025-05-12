@@ -13,7 +13,7 @@ parser.add_argument("--salinity_qc", type=parse_list, help="salinity QC flag to 
 parser.add_argument("--pressure_qc", type=parse_list, help="pressure QC flag to accept")
 args = parser.parse_args()
 
-files = glob.glob(args.data_dir + '/*')
+files = glob.glob(args.data_dir + '/*PFL*')
 
 julds = [[] for i in range(12)]
 lats = [[] for i in range(12)]
