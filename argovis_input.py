@@ -85,6 +85,7 @@ for file in files:
         'filetype': filetypes,
         'flag': flags
     })
+    print(len(df))
 
     # qc encoding hard coded for now
     df.to_parquet(f"{args.data_dir}/{month}_p0_t0_s0_1_profiles.parquet", engine='pyarrow')

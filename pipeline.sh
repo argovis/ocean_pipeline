@@ -7,12 +7,12 @@ declare pqc=0					# qc to keep for pressure, wod only, can be single valued (0) 
 declare tqc=0					# qc to keep for temeprature, wod only
 declare sqc='0,1'				# qc to keep for salinity, wod only
 declare region='15,300'				# integration dbar region, string CSV, in integration mode
-declare variable='absolute_salinity'		# 'absolute_salinity', 'potential_temperature', or 'conservative_temperature'
+declare variable='potential_temperature'	# 'absolute_salinity', 'potential_temperature', or 'conservative_temperature'
 
 # data prep
-if [$upstream == 'wod']; then
+if [[ $upstream == 'wod' ]]; then
     declare prep_id=$(sbatch --parsable wod.slurm $data_dir $wod_filetypes $pqc $tqc $sqc)
-elif [$upstream == 'argovis']; then
+elif [[ $upstream == 'argovis' ]]; then
     declare prep_id=$(sbatch --parsable argovis.slurm $data_dir)
 fi
 
@@ -22,14 +22,14 @@ for i in {1..12}; do
     varfile=${data_dir}/${i}_${variable}.parquet
     declare varcreation=$(sbatch --parsable --dependency=afterok:$prep_id variable_creation.slurm $qcfile $variable ${varfile})
 
-    if [$vartype == 'interpolation']; then
+    if [[ $vartype == 'interpolation' ]]; then
         interpfile=${data_dir}/${i}_${variable}_interpolated_${level}.parquet
         interp_downsampled=${data_dir}/${i}_${variable}_interpolated_${level}_downsampled.parquet
         interp_matlab=${data_dir}/${i}_${variable}_interpolated_${level}.mat
         declare interpolation=$(sbatch --parsable --dependency=afterok:$varcreation interpolate.slurm $varfile $level $variable $interpfile)
         declare downsample=$(sbatch --parsable --dependency=afterok:$interpolation downsample.slurm $interpfile $interp_downsampled)
         sbatch --dependency=afterok:$downsample matlab.slurm $interp_downsampled $interp_matlab ${variable}_interpolation
-    elif [$vartype == 'integration']; then
+    elif [[ $vartype == 'integration' ]]; then
         region_tag=${region/,/_}
         integfile=${data_dir}/${i}_${variable}_integrated_${region_tag}.parquet
         integ_downsampled=${data_dir}/${i}_${variable}_integrated_${region_tag}_downsampled.parquet
