@@ -14,7 +14,7 @@ def test_argovis_pipeline():
 
         # 1. argovis_input.py
         result = subprocess.run(
-            ["python", "../argovis_input.py", "--data_dir", tmpdir],
+            ["python", "argovis_input.py", "--data_dir", tmpdir],
             capture_output=True,
             text=True,
         )
