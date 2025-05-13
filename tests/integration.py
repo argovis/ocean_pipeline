@@ -1,4 +1,4 @@
-import subprocess, os, tempfile, json, glob, shutil, datetime, numpy, gsw
+import subprocess, os, tempfile, json, glob, shutil, datetime, numpy, gsw, scipy.interpolate
 import pandas as pd
 
 def test_argovis_pipeline():
@@ -57,7 +57,20 @@ def test_argovis_pipeline():
         assert numpy.allclose(df["potential_temperature"].iloc[0][index], potential_temperature)
         assert numpy.allclose(df["absolute_salinity"].iloc[0][index], absolute_salinity)
 
-
+        # 3a. interpolate.py
+        interpolate_out = os.path.join(tmpdir, "interpolated.parquet")
+        result = subprocess.run(
+            ["python", "interpolate.py", "--input_file", variable_creation_out, "--output_file", interpolate_out, "--level", "5.5", "--variable", "potential_temperature"],
+            capture_output=True,
+            text=True,
+        )
+        assert result.returncode == 0, f"Script failed:\n{result.stderr}"
+        interpolate = glob.glob(interpolate_out)
+        df = pd.read_parquet(interpolate[0])
+        interp = scipy.interpolate.PchipInterpolator(df["pressure"].iloc[0], df["potential_temperature"].iloc[0], extrapolate=False)([5.5])
+        assert numpy.allclose(interp, df["potential_temperature_interpolation"].iloc[0], equal_nan=True)
+        
+  
     finally:
         # Clean up manually (since mkdtemp doesn't auto-delete)
         shutil.rmtree(tmpdir)
