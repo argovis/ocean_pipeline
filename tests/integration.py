@@ -67,9 +67,22 @@ def test_argovis_pipeline():
         assert result.returncode == 0, f"Script failed:\n{result.stderr}"
         interpolate = glob.glob(interpolate_out)
         df = pd.read_parquet(interpolate[0])
+        ## pipeline should track pchip interpolation
         interp = scipy.interpolate.PchipInterpolator(df["pressure"].iloc[0], df["potential_temperature"].iloc[0], extrapolate=False)([5.5])
         assert numpy.allclose(interp, df["potential_temperature_interpolation"].iloc[0], equal_nan=True)
-        
+
+        # 3b. integrate.py
+        integrate_out = os.path.join(tmpdir, "integrated.parquet")
+        result = subprocess.run(
+            ["python", "integrate.py", "--input_file", variable_creation_out, "--output_file", integrate_out, "--variable", "potential_temperature", "--region", "5,10"],
+            capture_output=True,
+            text=True,
+        )
+        assert result.returncode == 0, f"Script failed:\n{result.stderr}"
+        integrate = glob.glob(integrate_out)
+        df = pd.read_parquet(integrate[0])
+        # basic integration stability check
+        assert numpy.allclose(df["potential_temperature_integration"].iloc[0], [1512.0568956])        
   
     finally:
         # Clean up manually (since mkdtemp doesn't auto-delete)
