@@ -8,7 +8,7 @@ on:
 jobs:
   test:
     runs-on: ubuntu-latest
-    container: argovis/wod2mat:dev
+    container: argovis/localgp_input:dev
 
     steps:
       - name: checkout
