@@ -1,4 +1,4 @@
-import subprocess, os, tempfile, json, glob, shutil, datetime, numpy
+import subprocess, os, tempfile, json, glob, shutil, datetime, numpy, gsw
 import pandas as pd
 
 def test_argovis_pipeline():
@@ -18,13 +18,11 @@ def test_argovis_pipeline():
             capture_output=True,
             text=True,
         )
-
         assert result.returncode == 0, f"Script failed:\n{result.stderr}"
 
-        parquet_files = glob.glob(os.path.join(tmpdir, "*.parquet"))
-        assert len(parquet_files) == 1, "Expected exactly one .parquet file"
-
-        df = pd.read_parquet(parquet_files[0])
+        argovis_input_out = os.path.join(tmpdir, "5_p0_t0_s0_1_profiles.parquet")
+        munged_input_file = glob.glob(argovis_input_out)
+        df = pd.read_parquet(munged_input_file[0])
         assert df["juld"].iloc[0] == 2460808.6796412035
         assert df["latitude"].iloc[0] == 2.32012 
         assert df["longitude"].iloc[0] == 360-27.4493
@@ -37,6 +35,28 @@ def test_argovis_pipeline():
         assert numpy.array_equal(df["temperature_qc"].iloc[0][0:5], [1,1,1,1,1])
         assert numpy.array_equal(df["pressure_qc"].iloc[0][0:5], [1,1,1,1,1])
         assert numpy.array_equal(df["salinity_qc"].iloc[0][0:5], [1,1,1,1,1])
+
+        # 2. variable_creation.py
+        variable_creation_out = os.path.join(tmpdir, "potential_temperature.parquet")
+        result = subprocess.run(
+            ["python", "variable_creation.py", "--input_file", argovis_input_out, "--variable", "potential_temperature", "--output_file", variable_creation_out],
+            capture_output=True,
+            text=True,
+        )
+        assert result.returncode == 0, f"Script failed:\n{result.stderr}"
+        variable_creation = glob.glob(variable_creation_out)
+        df = pd.read_parquet(variable_creation[0])
+        index = 5 # spot check a calculated absolute salinity and potential temperature
+        pressure = df["pressure"].iloc[0][index]
+        temperature = df["temperature"].iloc[0][index]
+        salinity = df["salinity"].iloc[0][index]
+        longitude = df["longitude"].iloc[0]
+        latitude = df["latitude"].iloc[0]
+        absolute_salinity = gsw.conversions.SA_from_SP(salinity, pressure, longitude, latitude)
+        potential_temperature = gsw.conversions.pt0_from_t(absolute_salinity, temperature, pressure) + 273.15
+        assert numpy.allclose(df["potential_temperature"].iloc[0][index], potential_temperature)
+        assert numpy.allclose(df["absolute_salinity"].iloc[0][index], absolute_salinity)
+
 
     finally:
         # Clean up manually (since mkdtemp doesn't auto-delete)
