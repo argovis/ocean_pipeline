@@ -39,19 +39,18 @@ for file in files:
         temp = data[i]['data'][data[i]['data_info'][0].index('temperature')]
         psal = data[i]['data'][data[i]['data_info'][0].index('salinity')]
         pres = data[i]['data'][data[i]['data_info'][0].index('pressure')]
-        # need to persist QCs, placeholders for now:
-        temp_qc = [0]*len(temp)
-        psal_qc = [0]*len(psal)
-        pres_qc = [0]*len(pres)
+        temp_qc = data[i]['data'][data[i]['data_info'][0].index('temperature_argoqc')]
+        psal_qc = data[i]['data'][data[i]['data_info'][0].index('salinity_argoqc')]
+        pres_qc = data[i]['data'][data[i]['data_info'][0].index('pressure_argoqc')]
 
         dt = datetime.datetime.strptime(data[i]['timestamp'], "%Y-%m-%dT%H:%M:%S.%fZ")
-        filetype = 'argo'
-        juld = helpers.mljul(dt.year,dt.month,dt.day,dt.hour/24 + dt.minute/24/60 + dt.second/24/60/60)
+        filetype = 'argovis'
+        juld = helpers.mljul(dt.year,dt.month,dt.day,dt.hour + dt.minute/60 + dt.second/60/60)
         lat = data[i]['geolocation']['coordinates'][1]
         lon = helpers.remap_longitude(data[i]['geolocation']['coordinates'][0])
         #uid = p.uid()
-        float = data[i]['_id'].split('_')[0]
-        cycle = data[i]['_id'].split('_')[1]
+        float = int(data[i]['_id'].split('_')[0])
+        cycle = int(data[i]['_id'].split('_')[1])
 
         julds.append(juld)
         lats.append(lat)
@@ -85,7 +84,7 @@ for file in files:
         'filetype': filetypes,
         'flag': flags
     })
-    print(len(df))
+
 
     # qc encoding hard coded for now
     df.to_parquet(f"{args.data_dir}/{month}_p0_t0_s0_1_profiles.parquet", engine='pyarrow')

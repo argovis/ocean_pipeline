@@ -13,5 +13,7 @@ jobs:
     steps:
       - name: checkout
         uses: actions/checkout@v2
-      - name: run_tests
-        run: pytest tests/*.py
+      - name: unit_tests
+        run: pytest tests/unit.py
+      - name: integration_tests
+        run: pytest tests/integration.py

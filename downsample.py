@@ -16,5 +16,6 @@ df['week_bin'] = numpy.floor(df['juld'] / 7)
 
 df_filtered = df.groupby(['lon_bin', 'lat_bin', 'week_bin'], as_index=False).apply(helpers.choose_profile, include_groups=False).reset_index(drop=True)
 df_filtered = df_filtered.drop(['lon_bin', 'lat_bin', 'week_bin'], axis=1)
+df_filtered.columns.name = None # unnecessary metadata breaks serialization
 
 df_filtered.to_parquet(args.output_file, engine='pyarrow')
