@@ -235,14 +235,39 @@ def sort_and_remove_neighbors(lst, lon_idx, lat_idx, jul_idx):
 def mask_far_interps(measured_pressures, interp_levels, interp_values):
     # mask interpolated values that are too far from the nearest measured pressure
     
-    RG_levels = [2.5, 10, 20, 30, 40, 50, 60, 70, 80, 90, 100, 110, 120, 130, 140, 150, 160, 170, 182.5, 200, 220, 240, 260, 280, 300, 320, 340, 360, 380, 400, 420, 440, 462.5, 500, 550, 600, 650, 700, 750, 800, 850, 900, 950, 1000, 1050, 1100, 1150, 1200, 1250, 1300, 1350, 1412.5, 1500, 1600, 1700, 1800, 1900, 1975]
-
     for i, level in enumerate(interp_levels):
-        ## determine how far is too far: half the gap between the nearest two RG levels
-        radius = 0.5 * surrounding_gap(RG_levels, level)
+        ## determine how far is too far: 
+        radius = 0
+        if level < 100:
+            radius = 10
+        elif level < 150:
+            radius = 20
+        elif level < 250:
+            radius = 40
+        elif level < 350:
+            radius = 60
+        elif level < 450:
+            radius = 80
+        elif level < 550:
+            radius = 100
+        elif level < 650:
+            radius = 120
+        elif level < 750:
+            radius = 140
+        elif level < 850:
+            radius = 160
+        else:
+            radius = 180
 
-        closest = min(measured_pressures, key=lambda x: abs(x - level))
-        if abs(closest - level) > radius:
+        i_below = 0
+        i_above = len(measured_pressures)-1
+        for j in range(len(measured_pressures)):
+            if measured_pressures[j] <= level:
+                i_below = j
+            else:
+                i_above = j
+                break
+        if abs(measured_pressures[i_below] - level) > radius or abs(measured_pressures[i_above] - level) > radius:
             interp_values[i] = numpy.nan
 
     return interp_values

@@ -10,8 +10,9 @@ df = pandas.read_parquet(args.input_file, engine='pyarrow')
 
 pandas.set_option('display.max_rows', None)
 
-df['lon_bin'] = numpy.floor(df['longitude'])
-df['lat_bin'] = numpy.floor(df['latitude'])
+binsize = 0.5
+df['lon_bin'] = numpy.floor(df['longitude'] / binsize)
+df['lat_bin'] = numpy.floor(df['latitude'] / binsize)
 df['week_bin'] = numpy.floor(df['juld'] / 7)
 
 df_filtered = df.groupby(['lon_bin', 'lat_bin', 'week_bin'], as_index=False).apply(helpers.choose_profile, include_groups=False).reset_index(drop=True)
