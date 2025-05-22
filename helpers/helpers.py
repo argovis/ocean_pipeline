@@ -9,6 +9,17 @@ def mljul(year, month, day, time):
     else:
         return julian + time/24
 
+def datenum_to_datetime(dn):
+    # MATLAB datenum: days since Jan 0, 0000
+    return datetime.datetime.fromordinal(int(dn)) + \
+           datetime.timedelta(days=dn % 1) - \
+           datetime.timedelta(days=366)
+
+def datetime_to_datenum(dt):
+    matlab_epoch = datetime.datetime(1, 1, 1)  # Python datetime has no year 0
+    delta = dt - matlab_epoch
+    return delta.days + delta.seconds / 86400 + 366 + 1
+
 def remap_longitude(longitude):
     # map longitudes onto [20,380)
 
@@ -221,15 +232,35 @@ def sort_and_remove_neighbors(lst, lon_idx, lat_idx, jul_idx):
 
     return s
 
-def mask_far_interps(measured_pressures, interp_levels, interp_values, radius=15):
-    # mask interpolated values that are more than <radius> dbar from the nearest measured pressure
+def mask_far_interps(measured_pressures, interp_levels, interp_values):
+    # mask interpolated values that are too far from the nearest measured pressure
+    
+    RG_levels = [2.5, 10, 20, 30, 40, 50, 60, 70, 80, 90, 100, 110, 120, 130, 140, 150, 160, 170, 182.5, 200, 220, 240, 260, 280, 300, 320, 340, 360, 380, 400, 420, 440, 462.5, 500, 550, 600, 650, 700, 750, 800, 850, 900, 950, 1000, 1050, 1100, 1150, 1200, 1250, 1300, 1350, 1412.5, 1500, 1600, 1700, 1800, 1900, 1975]
 
     for i, level in enumerate(interp_levels):
+        ## determine how far is too far: half the gap between the nearest two RG levels
+        radius = 0.5 * surrounding_gap(RG_levels, level)
+
         closest = min(measured_pressures, key=lambda x: abs(x - level))
         if abs(closest - level) > radius:
             interp_values[i] = numpy.nan
 
     return interp_values
+
+def surrounding_gap(levels, x):
+    i = bisect.bisect_left(levels, x)
+
+    if i == 0:
+        return levels[1] - levels[0]
+    elif i == len(levels):
+        return levels[-1] - levels[-2]
+    elif levels[i] == x:
+        if i == len(levels) - 1:
+            return levels[i] - levels[i - 1]
+        else:
+            return levels[i + 1] - levels[i]
+    else:
+        return levels[i] - levels[i - 1]
 
 def integration_region(region, pressure, variable):
     # perform intrgation of <variable> over <pressure> for a list of <regions> specified as tuples of (low_roi, high_roi)

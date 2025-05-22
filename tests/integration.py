@@ -23,7 +23,7 @@ def test_argovis_pipeline():
         argovis_input_out = os.path.join(tmpdir, "5_p0_t0_s0_1_profiles.parquet")
         munged_input_file = glob.glob(argovis_input_out)
         df = pd.read_parquet(munged_input_file[0])
-        assert df["juld"].iloc[0] == 2460808.6796412035
+        assert df["juld"].iloc[0] == 739750.1796412037
         assert df["latitude"].iloc[0] == 2.32012 
         assert df["longitude"].iloc[0] == 360-27.4493
         assert df["float"].iloc[0] == 1902305
@@ -114,7 +114,7 @@ def test_argovis_pipeline():
         assert numpy.allclose(mat['profLongAggrMonth'][0][0], 360-27.4493)
         assert numpy.allclose(mat['profFloatIDAggrMonth'][0][0], 1902305)
         assert numpy.allclose(mat['profObsIDAggrMonth'][0][0], 128)
-        assert numpy.allclose(mat['profJulDayAggrMonth'][0][0], 2460808.6796412035)
+        assert numpy.allclose(mat['profJulDayAggrMonth'][0][0], 739750.1796412037)
 
     finally:
         # Clean up manually (since mkdtemp doesn't auto-delete)
