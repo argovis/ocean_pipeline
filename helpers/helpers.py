@@ -15,6 +15,11 @@ def datenum_to_datetime(dn):
            datetime.timedelta(days=dn % 1) - \
            datetime.timedelta(days=366)
 
+def datetime_to_datenum(dt):
+    matlab_epoch = datetime.datetime(1, 1, 1)  # Python datetime has no year 0
+    delta = dt - matlab_epoch
+    return delta.days + delta.seconds / 86400 + 366
+
 def remap_longitude(longitude):
     # map longitudes onto [20,380)
 

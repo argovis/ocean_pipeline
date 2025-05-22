@@ -1,4 +1,4 @@
-import numpy, pytest, pandas
+import numpy, pytest, pandas, datetime
 from helpers import helpers
 
 def test_filterQCandPressure():
@@ -183,3 +183,16 @@ def test_surrounding_gap():
     assert helpers.surrounding_gap(RG_levels, 1975) == 75, 'give the lower gap at the end of the list'
     assert helpers.surrounding_gap(RG_levels, 2000) == 75, 'give the last gap past the end of the list'
     assert helpers.surrounding_gap(RG_levels, 0) == 7.5, 'give the first gap before the start of the list'
+
+def test_datenum_to_datetime():
+    datenum = 736333.6493055555 # 2016-01-04T15:35:00.000Z
+    expected_datetime = datetime.datetime(2016, 1, 4, 15, 35)
+    result = helpers.datenum_to_datetime(datenum)
+    delta = abs(result - expected_datetime)
+    assert delta < datetime.timedelta(seconds=1)
+
+def test_datetime_to_datenum():
+    dt = datetime.datetime(2016, 1, 4, 15, 35)
+    expected_datenum = 736333.6493055555
+    result = helpers.datetime_to_datenum(dt)
+    assert numpy.isclose(result, expected_datenum), 'datetime to datenum conversion'

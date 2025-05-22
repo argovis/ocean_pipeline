@@ -45,7 +45,7 @@ for file in files:
 
         dt = datetime.datetime.strptime(data[i]['timestamp'], "%Y-%m-%dT%H:%M:%S.%fZ")
         filetype = 'argovis'
-        juld = helpers.mljul(dt.year,dt.month,dt.day,dt.hour + dt.minute/60 + dt.second/60/60)
+        juld = helpers.datetime_to_datenum(dt)
         lat = data[i]['geolocation']['coordinates'][1]
         lon = helpers.remap_longitude(data[i]['geolocation']['coordinates'][0])
         #uid = p.uid()
