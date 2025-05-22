@@ -191,8 +191,14 @@ def test_datenum_to_datetime():
     delta = abs(result - expected_datetime)
     assert delta < datetime.timedelta(seconds=1)
 
+    datenum = 712224 # see https://www.mathworks.com/help/exlink/convert-dates-between-microsoft-excel-and-matlab.html
+    expected_datetime = datetime.datetime(1950, 1, 1, 0, 0)
+    result = helpers.datenum_to_datetime(datenum)
+    delta = abs(result - expected_datetime)
+    assert delta < datetime.timedelta(seconds=1)
+
 def test_datetime_to_datenum():
-    dt = datetime.datetime(2016, 1, 4, 15, 35)
-    expected_datenum = 736333.6493055555
+    dt = datetime.datetime(1950, 1, 1, 0, 0)
+    expected_datenum = 712224
     result = helpers.datetime_to_datenum(dt)
-    assert numpy.isclose(result, expected_datenum), 'datetime to datenum conversion'
+    assert abs(result-expected_datenum) < 0.00001, 'datetime to datenum conversion'
