@@ -121,7 +121,7 @@ def test_sort_and_remove_neighbors():
 
 def test_mask_far_interps():
 
-    insitu_pres = numpy.array([0.,1.,2.,3.,4.,5.,6.,7.,8.,9.])
+    insitu_pres = numpy.array([0.,1.,2.,3.,4.,5.,6.,7.,8.,9.,15.])
     interp_pres = numpy.array([4.5, 20, 50]) # note its not this function's job to disqualify levels outside of the range of measurements, only interpolated levels that don't have a close neighbor.
     interp_vals = numpy.array([0.,1.,2.])
 
@@ -174,3 +174,12 @@ def test_tidy_profile():
     assert helpers.tidy_profile([1,2,3,3,4], [6,7,8,9,10], 0) == ([1,2,4], [6,7,10], 1), 'mask degen neighbors'
     assert helpers.tidy_profile([6,5,4,3],[2,5,3,4], 0) == ([3,4,5,6], [4,3,5,2], 2), 'levels in reverse order'
     assert helpers.tidy_profile([1,2,4,3,5], [6,1,4,2,9], 0) == ([1,2,3,4,5], [6,1,2,4,9], 8), 'levels out of order'
+
+def test_surrounding_gap():
+    RG_levels = [2.5, 10, 20, 30, 40, 50, 60, 70, 80, 90, 100, 110, 120, 130, 140, 150, 160, 170, 182.5, 200, 220, 240, 260, 280, 300, 320, 340, 360, 380, 400, 420, 440, 462.5, 500, 550, 600, 650, 700, 750, 800, 850, 900, 950, 1000, 1050, 1100, 1150, 1200, 1250, 1300, 1350, 1412.5, 1500, 1600, 1700, 1800, 1900, 1975]
+
+    assert helpers.surrounding_gap(RG_levels, 11) == 10, 'distance between nearest neighbors'
+    assert helpers.surrounding_gap(RG_levels, 170) == 12.5, 'give the higher gap when right on a level'
+    assert helpers.surrounding_gap(RG_levels, 1975) == 75, 'give the lower gap at the end of the list'
+    assert helpers.surrounding_gap(RG_levels, 2000) == 75, 'give the last gap past the end of the list'
+    assert helpers.surrounding_gap(RG_levels, 0) == 7.5, 'give the first gap before the start of the list'
