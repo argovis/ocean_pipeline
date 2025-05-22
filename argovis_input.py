@@ -52,6 +52,9 @@ for file in files:
         float = int(data[i]['_id'].split('_')[0])
         cycle = int(data[i]['_id'].split('_')[1])
 
+        if cycle == 0:
+            continue
+
         julds.append(juld)
         lats.append(lat)
         lons.append(lon)
