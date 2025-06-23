@@ -12,6 +12,7 @@ files = glob.glob(args.data_dir + '/*json')
 
 # files loop months
 for file in files:
+    print(args.data_dir, file)
 
     year=int(file.split('/')[-1][0:4])
     month=int(file.split('/')[-1][5:7])
@@ -39,9 +40,12 @@ for file in files:
         temp = data[i]['data'][data[i]['data_info'][0].index('temperature')]
         psal = data[i]['data'][data[i]['data_info'][0].index('salinity')]
         pres = data[i]['data'][data[i]['data_info'][0].index('pressure')]
-        temp_qc = data[i]['data'][data[i]['data_info'][0].index('temperature_argoqc')]
-        psal_qc = data[i]['data'][data[i]['data_info'][0].index('salinity_argoqc')]
-        pres_qc = data[i]['data'][data[i]['data_info'][0].index('pressure_argoqc')]
+        #temp_qc = data[i]['data'][data[i]['data_info'][0].index('temperature_argoqc')]
+        #psal_qc = data[i]['data'][data[i]['data_info'][0].index('salinity_argoqc')]
+        #pres_qc = data[i]['data'][data[i]['data_info'][0].index('pressure_argoqc')]
+        temp_qc = [99]*len(temp)
+        psal_qc = [99]*len(psal)
+        pres_qc = [99]*len(pres)
 
         dt = datetime.datetime.strptime(data[i]['timestamp'], "%Y-%m-%dT%H:%M:%S.%fZ")
         filetype = 'argovis'
@@ -50,9 +54,9 @@ for file in files:
         lon = helpers.remap_longitude(data[i]['geolocation']['coordinates'][0])
         #uid = p.uid()
         float = int(data[i]['_id'].split('_')[0])
-        cycle = int(data[i]['_id'].split('_')[1])
+        cycle = data[i]['_id'].split('_')[1]
 
-        if cycle == 0:
+        if cycle[0:3] == '000':
             continue
 
         julds.append(juld)

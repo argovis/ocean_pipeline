@@ -99,6 +99,7 @@ def tidy_profile(pressure, var, flag):
     # 2: levels in reverse order
     # 4: variable of interest was NaN, masked
     # 8: levels non-monotonic, had to sort
+    # 32: pressure was NaN, masked
 
     ## dependent variable must be defined
     mask = [0]*len(var)
@@ -108,6 +109,15 @@ def tidy_profile(pressure, var, flag):
             flag = flag | 4
     p = [pressure[i] for i in range(len(mask)) if mask[i]==0]
     v = [var[i] for i in range(len(mask)) if mask[i]==0]
+
+    ## pressure must be defined
+    mask = [0]*len(p)
+    for i in range(len(p)):
+        if p[i] is None or math.isnan(p[i]):
+            mask[i] = 1
+            flag = flag | 32
+    p = [p[i] for i in range(len(mask)) if mask[i]==0]
+    v = [v[i] for i in range(len(mask)) if mask[i]==0]
 
     ## drop degenerate levels and flag
     mask = [0]*len(p)
