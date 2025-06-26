@@ -6,7 +6,7 @@ declare level=10				# dbar to interpolate to in interpolation mode
 declare pqc=0					# qc to keep for pressure, wod only, can be single valued (0) or string CSV ('0,1')
 declare tqc=0					# qc to keep for temeprature, wod only
 declare sqc='0,1'					# qc to keep for salinity, wod only
-declare region='1800,1850'				# integration dbar region, string CSV, in integration mode
+declare region='15,300'				# integration dbar region, string CSV, in integration mode
 declare variable='potential_temperature'	# 'absolute_salinity', 'potential_temperature', or 'conservative_temperature'
 
 # data prep

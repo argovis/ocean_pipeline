@@ -69,14 +69,15 @@ for file in files:
         if len(pres) != len(temp) or len(pres) != len(psal):
             continue
         for level_idx in range(len(pres) - 1):
-            ## pressure levels must be ascending
-            if pres[level_idx + 1] <= pres[level_idx]:
-                continue
-            ## gaps larger than 200 dbar are not allowed
-            if pres[level_idx + 1] - pres[level_idx] > 200:
-                continue
+            if pres[level_idx] is not None and pres[level_idx + 1] is not None:
+                ## pressure levels must be ascending
+                if pres[level_idx + 1] <= pres[level_idx]:
+                    continue
+                ## gaps larger than 200 dbar are not allowed
+                if pres[level_idx + 1] - pres[level_idx] > 200:
+                    continue
         ## at least 100 dbar in extent
-        if pres[-1] - pres[0] < 100:
+        if pres[0] is not None and pres[-1] is not None and (pres[-1] - pres[0] < 100):
             continue
         ## no startup cycles
         if cycle[0:3] == '000':

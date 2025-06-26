@@ -333,3 +333,11 @@ def choose_profile(group):
 
 def merge_qc(qc_lists):
     return [max(column) for column in zip(*qc_lists)]
+
+def mld_estimator(row):
+    # estimate the mixed layer depth for this profile
+    # row['potential_density'] == gsw potential density from which to estimate MLD threshold
+
+    reference_depth = 10
+    reference_density, _ = interpolate_to_levels(row, 'potential_density', [reference_depth])[0]
+    threshold_density = reference_density + 0.03
