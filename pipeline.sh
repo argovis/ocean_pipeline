@@ -1,4 +1,4 @@
-declare vartype='integration'	 		# 'integration' or 'interpolation'
+declare vartype='integration'	 		# 'integration', 'interpolation', or 'none'
 declare upstream='argovis' 			# 'argovis' or 'wod'
 declare data_dir=$1				# where is a year of upstream data?
 declare wod_filetypes='PFL,MRB,CTD'		# WOD filetypes, wod only

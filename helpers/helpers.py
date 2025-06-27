@@ -341,3 +341,70 @@ def mld_estimator(row):
     reference_depth = 10
     reference_density, _ = interpolate_to_levels(row, 'potential_density', [reference_depth])[0]
     threshold_density = reference_density + 0.03
+
+    # go fishing for the depth that corresponds to the threshold 
+    mld = pchip_search(threshold_density, 0, 1000, 1, row, 'potential_density')
+
+    # mld = None
+    # mld_pd = None
+    # min_level = 0
+    # max_level = 1000 # assuming the mld is in the first 1000 m
+    # comb = numpy.arrange(min_level, max_level + 1, 1) # a 1m comb should get us pretty close so we aren't off in some weird pathology
+    # iterations = 0
+    # while abs(mld_pd - threshold_density) > 0.0001 and iterations < 100:
+    #     density_comb, flag = interpolate_to_levels(row, 'potential_density', comb)
+    #     closest_i = min(range(len(density_comb)), key=lambda i: abs(density_comb[i] - threshold_density))
+    #     mld = comb[closest_i]
+    #     mld_pd = density_comb[closest_i]
+    #     if closest_i == 0:
+    #         min_level = comb[0]
+    #         max_level = comb[1]
+    #     elif closest_i == len(comb) - 1:
+    #         min_level = comb[-2]
+    #         max_level = comb[-1]
+    #     else:
+    #         min_level = comb[closest_i - 1]
+    #         max_level = comb[closest_i + 1]
+    #     stepsize = (max_level - min_level) / 10
+    #     comb = numpy.arange(min_level, max_level + stepsize, stepsize)
+    #     iterations += 1
+
+    # if abs(mld_pd - threshold_density) > 0.0001:
+    #     return mld_pd
+    # else:
+    #     return None # ie if we exit on capped number of iterations, don't trust the result
+
+def pchip_search(target, init_min, init_max, init_step, row, variable):
+    threshold = 0.0001
+    guess = -99999
+    fguess = -99999
+    range_min = max(init_min, min(row['pressure']))
+    range_max = min(init_max, max(row['pressure']))
+    comb = numpy.arange(range_min, range_max + init_step, init_step)
+    iterations = 0
+
+
+    while abs(fguess - target) > threshold and iterations < 100:
+        fcomb, flag = interpolate_to_levels(row, variable, comb)
+        closest_i = min(range(len(fcomb)), key=lambda i: abs(fcomb[i] - target))
+        guess = comb[closest_i]
+        fguess = fcomb[closest_i]
+        print(closest_i, guess, fguess)
+        if closest_i == 0:
+            range_min = comb[0]
+            range_max = comb[1]
+        elif closest_i == len(comb) - 1:
+            range_min = comb[-2]
+            range_max = comb[-1]
+        else:
+            range_min = comb[closest_i - 1]
+            range_max = comb[closest_i + 1]
+        stepsize = (range_max - range_min) / 10
+        comb = numpy.arange(range_min, range_max + stepsize, stepsize)
+        iterations += 1
+
+    if abs(fguess - target) < threshold:
+        return guess
+    else:
+        return None
+
