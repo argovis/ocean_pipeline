@@ -30,7 +30,7 @@ def test_argovis_pipeline():
         assert df["latitude"].iloc[0] == 2.32012 
         assert df["longitude"].iloc[0] == 360-27.4493
         assert df["float"].iloc[0] == 1902305
-        assert df["cycle"].iloc[0] == 128
+        assert df["cycle"].iloc[0] == '128'
         assert df["filetype"].iloc[0] == 'argovis'
         assert numpy.array_equal(df["temperature"].iloc[0][0:5], [28.973,29.006001,29.028999,29.062,29.112])
         assert numpy.array_equal(df["pressure"].iloc[0][0:5], [1.04,1.96,3,4.04,5.08])
@@ -116,7 +116,7 @@ def test_argovis_pipeline():
         assert numpy.allclose(mat['profLatAggrMonth'][0][0], 2.32012)
         assert numpy.allclose(mat['profLongAggrMonth'][0][0], 360-27.4493)
         assert numpy.allclose(mat['profFloatIDAggrMonth'][0][0], 1902305)
-        assert numpy.allclose(mat['profObsIDAggrMonth'][0][0], 128)
+        assert mat['profObsIDAggrMonth'][0] == '128'
         assert numpy.allclose(mat['profJulDayAggrMonth'][0][0], 739750.1796412037)
 
     finally:
