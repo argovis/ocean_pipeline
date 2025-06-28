@@ -70,6 +70,10 @@ if args.variable == 'mld':
 	axis=1
     )
 
+    # abandon profiles for which we could not calculate a mld
+    df = df[df['mld'].apply(lambda x: x != [None])].reset_index(drop=True)
+
+
     df['mld_qc'] = df.apply(
         lambda row: helpers.merge_qc([row['salinity_qc'], row['temperature_qc'], row['pressure_qc']]),
         axis=1

@@ -6,6 +6,7 @@ from helpers import helpers
 # argument setup
 parser = argparse.ArgumentParser()
 parser.add_argument("--data_dir", type=str, help="directory with Argovis JSON")
+parser.add_argument("--psc_filter", type=bool, help="whether or not to apply PSC-style profile filtering")
 args = parser.parse_args()
 
 files = glob.glob(args.data_dir + '/*json')
@@ -58,30 +59,31 @@ for file in files:
         geolocation_qc = data[i]['geolocation_argoqc']
         timestamp_qc = data[i]['timestamp_argoqc']
 
-        # PSC-esue filtering
-        ## must have good geolocation and timestamp qc
-        if geolocation_qc != 1 or timestamp_qc != 1:
-            continue
-        ## must have more than one level
-        if len(pres) < 2:
-            continue
-        ## temp and psal lengths must match pressure
-        if len(pres) != len(temp) or len(pres) != len(psal):
-            continue
-        for level_idx in range(len(pres) - 1):
-            if pres[level_idx] is not None and pres[level_idx + 1] is not None:
-                ## pressure levels must be ascending
-                if pres[level_idx + 1] <= pres[level_idx]:
-                    continue
-                ## gaps larger than 200 dbar are not allowed
-                if pres[level_idx + 1] - pres[level_idx] > 200:
-                    continue
-        ## at least 100 dbar in extent
-        if pres[0] is not None and pres[-1] is not None and (pres[-1] - pres[0] < 100):
-            continue
-        ## no startup cycles
-        if cycle[0:3] == '000':
-            continue
+        if args.psc_filter:
+            # PSC-esue filtering
+            ## must have good geolocation and timestamp qc
+            if geolocation_qc != 1 or timestamp_qc != 1:
+                continue
+            ## must have more than one level
+            if len(pres) < 2:
+                continue
+            ## temp and psal lengths must match pressure
+            if len(pres) != len(temp) or len(pres) != len(psal):
+                continue
+            for level_idx in range(len(pres) - 1):
+                if pres[level_idx] is not None and pres[level_idx + 1] is not None:
+                    ## pressure levels must be ascending
+                    if pres[level_idx + 1] <= pres[level_idx]:
+                        continue
+                    ## gaps larger than 200 dbar are not allowed
+                    if pres[level_idx + 1] - pres[level_idx] > 200:
+                        continue
+            ## at least 100 dbar in extent
+            if pres[0] is not None and pres[-1] is not None and (pres[-1] - pres[0] < 100):
+                continue
+            ## no startup cycles
+            if cycle[0:3] == '000':
+                continue
 
         julds.append(juld)
         lats.append(lat)

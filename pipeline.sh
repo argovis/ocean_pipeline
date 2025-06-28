@@ -1,13 +1,13 @@
-declare vartype='integration'	 		# 'integration', 'interpolation', or 'none'
+declare vartype='none'	 			# 'integration', 'interpolation', or 'none' (if no interpoltions or integrations needed)
 declare upstream='argovis' 			# 'argovis' or 'wod'
 declare data_dir=$1				# where is a year of upstream data?
 declare wod_filetypes='PFL,MRB,CTD'		# WOD filetypes, wod only
 declare level=10				# dbar to interpolate to in interpolation mode
 declare pqc=0					# qc to keep for pressure, wod only, can be single valued (0) or string CSV ('0,1')
 declare tqc=0					# qc to keep for temeprature, wod only
-declare sqc='0,1'					# qc to keep for salinity, wod only
+declare sqc='0,1'				# qc to keep for salinity, wod only
 declare region='15,300'				# integration dbar region, string CSV, in integration mode
-declare variable='potential_temperature'	# 'absolute_salinity', 'potential_temperature', or 'conservative_temperature'
+declare variable='mld'				# 'absolute_salinity', 'potential_temperature', 'conservative_temperature', 'potential_density', 'mld'
 
 # data prep
 if [[ $upstream == 'wod' ]]; then
@@ -38,5 +38,10 @@ for i in {1..12}; do
         declare integration=$(sbatch --parsable --dependency=afterok:$varcreation integrate.slurm $varfile $region $variable $integfile)
         declare downsample=$(sbatch --parsable --dependency=afterok:$integration downsample.slurm $integfile $integ_downsampled)
         sbatch --dependency=afterok:$downsample matlab.slurm $integ_downsampled $integ_matlab ${variable}_integration
+    elif [[ $vartype == 'none' ]]; then
+        var_downsampled=${data_dir}/${i}_${variable}_downsampled.parquet
+        var_matlab=${data_dir}/${i}_${variable}.mat
+        declare downsample=$(sbatch --parsable --dependency=afterok:$varcreation downsample.slurm $varfile $var_downsampled)
+        sbatch --dependency=afterok:$downsample matlab.slurm $var_downsampled $var_matlab ${variable}
     fi
 done
