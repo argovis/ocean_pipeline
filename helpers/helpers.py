@@ -99,6 +99,7 @@ def tidy_profile(pressure, var, flag):
     # 2: levels in reverse order
     # 4: variable of interest was NaN, masked
     # 8: levels non-monotonic, had to sort
+    # 32: pressure was NaN, masked
 
     ## dependent variable must be defined
     mask = [0]*len(var)
@@ -108,6 +109,15 @@ def tidy_profile(pressure, var, flag):
             flag = flag | 4
     p = [pressure[i] for i in range(len(mask)) if mask[i]==0]
     v = [var[i] for i in range(len(mask)) if mask[i]==0]
+
+    ## pressure must be defined
+    mask = [0]*len(p)
+    for i in range(len(p)):
+        if p[i] is None or math.isnan(p[i]):
+            mask[i] = 1
+            flag = flag | 32
+    p = [p[i] for i in range(len(mask)) if mask[i]==0]
+    v = [v[i] for i in range(len(mask)) if mask[i]==0]
 
     ## drop degenerate levels and flag
     mask = [0]*len(p)
@@ -323,3 +333,54 @@ def choose_profile(group):
 
 def merge_qc(qc_lists):
     return [max(column) for column in zip(*qc_lists)]
+
+def mld_estimator(row):
+    # estimate the mixed layer depth for this profile
+    # row['potential_density'] == gsw potential density from which to estimate MLD threshold
+
+    reference_depth = 10
+    reference_density = interpolate_to_levels(row, 'potential_density', [reference_depth])[0][0]
+    if numpy.isnan(reference_density):
+        return [None]
+    threshold_density = reference_density + 0.03
+
+    # go fishing for the depth that corresponds to the threshold
+    return [pchip_search(threshold_density, 0, 1000, 1, row, 'potential_density')]
+
+
+def pchip_search(target, init_min, init_max, init_step, row, variable):
+    threshold = 0.0001
+    guess = -99999
+    fguess = -99999
+    range_min = max(init_min, min(row['pressure']))
+    range_max = min(init_max, max(row['pressure']))
+    comb = numpy.arange(range_min, range_max + init_step, init_step)
+    iterations = 0
+
+    while abs(fguess - target) > threshold and iterations < 100 and range_max > range_min:
+        fcomb, flag = interpolate_to_levels(row, variable, comb)
+        lower = None
+        upper = None
+        # find the first bracket around the target value
+        for i in range(len(fcomb)-1):
+            if fcomb[i] <= target and fcomb[i+1] > target:
+                lower = i
+                upper = i+1
+                break
+        if lower is None:
+            return None # nothing brackets the target value, give up
+        guess = comb[lower]
+        fguess = fcomb[lower]
+        range_min = comb[lower]
+        range_max = comb[upper]
+        if range_max == range_min:
+            break
+        stepsize = (range_max - range_min) / 10
+        comb = numpy.arange(range_min, range_max + stepsize, stepsize)
+        iterations += 1
+
+    if abs(fguess - target) < threshold:
+        return guess
+    else:
+        return None
+

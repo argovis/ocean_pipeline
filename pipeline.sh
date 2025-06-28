@@ -1,4 +1,4 @@
-declare vartype='interpolation' 		# 'integration' or 'interpolation'
+declare vartype='none'	 			# 'integration', 'interpolation', or 'none' (if no interpoltions or integrations needed)
 declare upstream='argovis' 			# 'argovis' or 'wod'
 declare data_dir=$1				# where is a year of upstream data?
 declare wod_filetypes='PFL,MRB,CTD'		# WOD filetypes, wod only
@@ -7,7 +7,7 @@ declare pqc=0					# qc to keep for pressure, wod only, can be single valued (0) 
 declare tqc=0					# qc to keep for temeprature, wod only
 declare sqc='0,1'				# qc to keep for salinity, wod only
 declare region='15,300'				# integration dbar region, string CSV, in integration mode
-declare variable='potential_temperature'	# 'absolute_salinity', 'potential_temperature', or 'conservative_temperature'
+declare variable='mld'				# 'absolute_salinity', 'potential_temperature', 'conservative_temperature', 'potential_density', 'mld'
 
 # data prep
 if [[ $upstream == 'wod' ]]; then
@@ -21,6 +21,7 @@ for i in {1..12}; do
     qcfile=${data_dir}/${i}_p${pqc//,/_}_t${tqc//,/_}_s${sqc//,/_}_profiles.parquet
     varfile=${data_dir}/${i}_${variable}.parquet
     declare varcreation=$(sbatch --parsable --dependency=afterok:$prep_id variable_creation.slurm $qcfile $variable ${varfile})
+    #declare varcreation=$(sbatch --parsable variable_creation.slurm $qcfile $variable ${varfile})
 
     if [[ $vartype == 'interpolation' ]]; then
         interpfile=${data_dir}/${i}_${variable}_interpolated_${level}.parquet
@@ -37,5 +38,10 @@ for i in {1..12}; do
         declare integration=$(sbatch --parsable --dependency=afterok:$varcreation integrate.slurm $varfile $region $variable $integfile)
         declare downsample=$(sbatch --parsable --dependency=afterok:$integration downsample.slurm $integfile $integ_downsampled)
         sbatch --dependency=afterok:$downsample matlab.slurm $integ_downsampled $integ_matlab ${variable}_integration
+    elif [[ $vartype == 'none' ]]; then
+        var_downsampled=${data_dir}/${i}_${variable}_downsampled.parquet
+        var_matlab=${data_dir}/${i}_${variable}.mat
+        declare downsample=$(sbatch --parsable --dependency=afterok:$varcreation downsample.slurm $varfile $var_downsampled)
+        sbatch --dependency=afterok:$downsample matlab.slurm $var_downsampled $var_matlab ${variable}
     fi
 done

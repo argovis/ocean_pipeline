@@ -6,12 +6,14 @@ from helpers import helpers
 # argument setup
 parser = argparse.ArgumentParser()
 parser.add_argument("--data_dir", type=str, help="directory with Argovis JSON")
+parser.add_argument("--psc_filter", type=bool, help="whether or not to apply PSC-style profile filtering")
 args = parser.parse_args()
 
 files = glob.glob(args.data_dir + '/*json')
 
 # files loop months
 for file in files:
+    print(args.data_dir, file)
 
     year=int(file.split('/')[-1][0:4])
     month=int(file.split('/')[-1][5:7])
@@ -36,13 +38,16 @@ for file in files:
 
     for i in range(len(data)):
 
+        # variable extraction
         temp = data[i]['data'][data[i]['data_info'][0].index('temperature')]
         psal = data[i]['data'][data[i]['data_info'][0].index('salinity')]
         pres = data[i]['data'][data[i]['data_info'][0].index('pressure')]
         temp_qc = data[i]['data'][data[i]['data_info'][0].index('temperature_argoqc')]
         psal_qc = data[i]['data'][data[i]['data_info'][0].index('salinity_argoqc')]
         pres_qc = data[i]['data'][data[i]['data_info'][0].index('pressure_argoqc')]
-
+        # temp_qc = [99]*len(temp)
+        # psal_qc = [99]*len(psal)
+        # pres_qc = [99]*len(pres)
         dt = datetime.datetime.strptime(data[i]['timestamp'], "%Y-%m-%dT%H:%M:%S.%fZ")
         filetype = 'argovis'
         juld = helpers.datetime_to_datenum(dt)
@@ -50,10 +55,35 @@ for file in files:
         lon = helpers.remap_longitude(data[i]['geolocation']['coordinates'][0])
         #uid = p.uid()
         float = int(data[i]['_id'].split('_')[0])
-        cycle = int(data[i]['_id'].split('_')[1])
+        cycle = data[i]['_id'].split('_')[1]
+        geolocation_qc = data[i]['geolocation_argoqc']
+        timestamp_qc = data[i]['timestamp_argoqc']
 
-        if cycle == 0:
-            continue
+        if args.psc_filter:
+            # PSC-esue filtering
+            ## must have good geolocation and timestamp qc
+            if geolocation_qc != 1 or timestamp_qc != 1:
+                continue
+            ## must have more than one level
+            if len(pres) < 2:
+                continue
+            ## temp and psal lengths must match pressure
+            if len(pres) != len(temp) or len(pres) != len(psal):
+                continue
+            for level_idx in range(len(pres) - 1):
+                if pres[level_idx] is not None and pres[level_idx + 1] is not None:
+                    ## pressure levels must be ascending
+                    if pres[level_idx + 1] <= pres[level_idx]:
+                        continue
+                    ## gaps larger than 200 dbar are not allowed
+                    if pres[level_idx + 1] - pres[level_idx] > 200:
+                        continue
+            ## at least 100 dbar in extent
+            if pres[0] is not None and pres[-1] is not None and (pres[-1] - pres[0] < 100):
+                continue
+            ## no startup cycles
+            if cycle[0:3] == '000':
+                continue
 
         julds.append(juld)
         lats.append(lat)
@@ -87,7 +117,6 @@ for file in files:
         'filetype': filetypes,
         'flag': flags
     })
-
 
     # qc encoding hard coded for now
     df.to_parquet(f"{args.data_dir}/{month}_p0_t0_s0_1_profiles.parquet", engine='pyarrow')

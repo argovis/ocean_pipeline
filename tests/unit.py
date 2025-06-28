@@ -202,3 +202,12 @@ def test_datetime_to_datenum():
     expected_datenum = 712224
     result = helpers.datetime_to_datenum(dt)
     assert abs(result-expected_datenum) < 0.00001, 'datetime to datenum conversion'
+
+def test_pchip_search():
+    # pchip_search(target, init_min, init_max, init_step, row, variable)
+
+    profile = {'juld': 100, 'latitude': 1, 'longitude': 2, 'pressure': [1,2,3,4,5], 'temperature': [10,20,30,40,50], 'salinity': [35,34,33,32,31], 'flag': 0}
+    df = pandas.DataFrame([profile])
+
+    assert numpy.isclose(helpers.pchip_search(20.35, 1, 4, 1, df.iloc[0], 'temperature'), 2.035), 'pchip search basic'
+    assert numpy.isclose(helpers.pchip_search(20.35, -10, 10, 1, df.iloc[0], 'temperature'), 2.035), 'cope with too-big range'
