@@ -172,7 +172,7 @@ def interpolate_to_levels(row, var, levels, pressure_buffer=100.0, pressure_inde
         interp = scipy.interpolate.PchipInterpolator(pressure[p_bracket[0]:p_bracket[1]+1], variable[p_bracket[0]:p_bracket[1]+1], extrapolate=False)(levels)
 
         # if there wasn't a measured level within a certain radius of each level of interest, mask the interpolation at that level.
-        interp = mask_far_interps(pressure[p_bracket[0]:p_bracket[1]+1], levels, interp)
+        #interp = mask_far_interps(pressure[p_bracket[0]:p_bracket[1]+1], levels, interp)
 
         return interp, flag
 
@@ -191,6 +191,7 @@ def interpolate_and_integrate(pressures, temperatures, low_roi, high_roi):
 def integrate_roi(pressure, variable, low_roi, high_roi):
     # trapezoidal integration of <variable> over <pressure> from <low_roi> to <high_roi>.
     # will error out if <low_roi> and/or <high_roi> are not found in <pressure>.
+    # will return nan if any nans in pressure or variable
 
     low_i = int(numpy.where(pressure == low_roi)[0][0])
     high_i = int(numpy.where(pressure == high_roi)[0][0])
@@ -244,9 +245,9 @@ def sort_and_remove_neighbors(lst, lon_idx, lat_idx, jul_idx):
 
 def mask_far_interps(measured_pressures, interp_levels, interp_values):
     # mask interpolated values that are too far from the nearest measured pressure
-    
+
     for i, level in enumerate(interp_levels):
-        ## determine how far is too far: 
+        ## determine how far is too far:
         radius = 0
         if level < 100:
             radius = 10

@@ -1,4 +1,4 @@
-declare vartype='none'	 			# 'integration', 'interpolation', or 'none' (if no interpoltions or integrations needed)
+declare vartype='integration'	 		# 'integration', 'interpolation', or 'none' (if no interpoltions or integrations needed)
 declare upstream='argovis' 			# 'argovis' or 'wod'
 declare data_dir=$1				# where is a year of upstream data?
 declare wod_filetypes='PFL,MRB,CTD'		# WOD filetypes, wod only
@@ -7,7 +7,7 @@ declare pqc=0					# qc to keep for pressure, wod only, can be single valued (0) 
 declare tqc=0					# qc to keep for temeprature, wod only
 declare sqc='0,1'				# qc to keep for salinity, wod only
 declare region='15,300'				# integration dbar region, string CSV, in integration mode
-declare variable='mld'				# 'absolute_salinity', 'potential_temperature', 'conservative_temperature', 'potential_density', 'mld'
+declare variable='potential_temperature'	# 'absolute_salinity', 'potential_temperature', 'conservative_temperature', 'potential_density', 'mld'
 
 # data prep
 if [[ $upstream == 'wod' ]]; then

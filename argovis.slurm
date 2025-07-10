@@ -15,4 +15,4 @@ module load anaconda/2023.09
 conda activate wod2mat
 
 cd $SLURM_SUBMIT_DIR
-python argovis_input.py --data_dir $1
+python argovis_input.py --data_dir $1 --psc_filter True

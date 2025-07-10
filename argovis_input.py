@@ -61,8 +61,15 @@ for file in files:
 
         if args.psc_filter:
             # PSC-esue filtering
+            ## must have only QC 1 or 2 for every single pressure, temperature and salinity level
+            if not all(x in (1, 2, None) for x in temp_qc):
+                continue
+            if not all(x in (1, 2, None) for x in psal_qc):
+                continue
+            if not all(x in (1, 2, None) for x in pres_qc):
+                continue
             ## must have good geolocation and timestamp qc
-            if geolocation_qc != 1 or timestamp_qc != 1:
+            if geolocation_qc not in (1,2) or timestamp_qc not in (1,2):
                 continue
             ## must have more than one level
             if len(pres) < 2:
@@ -70,14 +77,17 @@ for file in files:
             ## temp and psal lengths must match pressure
             if len(pres) != len(temp) or len(pres) != len(psal):
                 continue
+            mangled_pressure = False
             for level_idx in range(len(pres) - 1):
                 if pres[level_idx] is not None and pres[level_idx + 1] is not None:
                     ## pressure levels must be ascending
                     if pres[level_idx + 1] <= pres[level_idx]:
-                        continue
+                        mangled_pressure = True
                     ## gaps larger than 200 dbar are not allowed
                     if pres[level_idx + 1] - pres[level_idx] > 200:
-                        continue
+                        mangled_pressure = True
+            if mangled_pressure:
+                continue
             ## at least 100 dbar in extent
             if pres[0] is not None and pres[-1] is not None and (pres[-1] - pres[0] < 100):
                 continue
