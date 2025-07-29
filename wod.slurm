@@ -15,4 +15,4 @@ module load anaconda/2023.09
 conda activate wod2mat
 
 cd $SLURM_SUBMIT_DIR
-python wod_input.py --data_dir $1 --filetypes $2 --pressure_qc $3 --temperature_qc $4 --salinity_qc $5
+python wod_input.py --data_dir $1 --year $2 --month $3 --filetypes $4 --pressure_qc $5 --temperature_qc $6 --salinity_qc $7

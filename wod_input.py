@@ -1,3 +1,7 @@
+# note that WOD makes downloading data month by month a bit cumbersome without a scriptable API;
+# so this script uses --year and --month flags to pick out profiles that are in the month of interest.
+# of course, this will lead to a lot of wasted time unpacking the same profiles over and over if long time periods are in the data_dir inputs.
+# happy medium: download yearly data from WOD, give each its own data_dir.
 import numpy, argparse, glob, pandas
 from wodpy import wod
 from helpers import helpers
@@ -11,6 +15,8 @@ def strlist(s):
 # argument setup
 parser = argparse.ArgumentParser()
 parser.add_argument("--data_dir", type=str, help="directory with ASCII WOD data")
+parser.add_argument("--year", type=int, help="year to consider")
+parser.add_argument("--month", type=int, help="month to consider")
 parser.add_argument("--filetypes", type=strlist, help="WOD file types as a CSV string, like 'PFL,MRB,CTD'....")
 parser.add_argument("--temperature_qc", type=parse_list, help="temperature QC flag to accept")
 parser.add_argument("--salinity_qc", type=parse_list, help="salinity QC flag to accept")
@@ -21,23 +27,25 @@ files = []
 for filetype in args.filetypes:
     files.extend(glob.glob(args.data_dir + '/*'+filetype+'*'))
 
-julds = [[] for i in range(12)]
-lats = [[] for i in range(12)]
-lons = [[] for i in range(12)]
-filetypes = [[] for i in range(12)]
-temps = [[] for i in range(12)]
-psals = [[] for i in range(12)]
-pressures = [[] for i in range(12)]
-temps_qc = [[] for i in range(12)]
-psals_qc = [[] for i in range(12)]
-pressures_qc = [[] for i in range(12)]
-flags = [[] for i in range(12)]
-uids = [[] for i in range(12)]
+julds = []
+lats = []
+lons = []
+filetypes = []
+temps = []
+psals = []
+pressures = []
+temps_qc = []
+psals_qc = []
+pressures_qc = []
+flags = []
+uids = []
 
 for file in files:
 
     fid = open(file)
     p = wod.WodProfile(fid)
+    if p.year() != args.year or p.month() != args.month:
+        continue
     while True:
         # extract and QC filter in situ measurements
         pindex = p.var_index(25)
@@ -61,40 +69,39 @@ for file in files:
         lon = helpers.remap_longitude(p.longitude())
         uid = p.uid()
 
-        julds[month-1].append(juld)
-        lats[month-1].append(lat)
-        lons[month-1].append(lon)
-        filetypes[month-1].append(filetype)
-        temps[month-1].append(temp)
-        psals[month-1].append(psal)
-        pressures[month-1].append(pres)
-        temps_qc[month-1].append(temp_qc)
-        psals_qc[month-1].append(psal_qc)
-        pressures_qc[month-1].append(pres_qc)
-        flags[month-1].append(0)
-        uids[month-1].append(uid)
+        julds.append(juld)
+        lats.append(lat)
+        lons.append(lon)
+        filetypes.append(filetype)
+        temps.append(temp)
+        psals.append(psal)
+        pressures.append(pres)
+        temps_qc.append(temp_qc)
+        psals_qc.append(psal_qc)
+        pressures_qc.append(pres_qc)
+        flags.append(0)
+        uids.append(uid)
 
         if p.is_last_profile_in_file(fid):
             break
         else:
             p = wod.WodProfile(fid)
 
-dataframes = [
+dataframe =
     pandas.DataFrame({
-        'uid': uids[i],
-        'juld': julds[i],
-        'longitude': lons[i],
-        'latitude': lats[i],
-        'temperature': temps[i],
-        'temperature_qc': temps_qc[i],
-        'salinity': psals[i],
-        'salinity_qc': psals_qc[i],
-        'pressure': pressures[i],
-        'pressure_qc': pressures_qc[i],
-        'filetype': filetypes[i],
-        'flag': flags[i]
-    }) for i in range(12)
-]
+        'uid': uids,
+        'juld': julds,
+        'longitude': lons,
+        'latitude': lats,
+        'temperature': temps,
+        'temperature_qc': temps_qc,
+        'salinity': psals,
+        'salinity_qc': psals_qc,
+        'pressure': pressures,
+        'pressure_qc': pressures_qc,
+        'filetype': filetypes,
+        'flag': flags
+    })
 
-for i in range(12):
-    dataframes[i].to_parquet(f"{args.data_dir}/{i+1}_p{'_'.join([str(x) for x in args.pressure_qc])}_t{'_'.join([str(x) for x in args.temperature_qc])}_s{'_'.join([str(x) for x in args.salinity_qc])}_profiles.parquet", engine='pyarrow')
+
+dataframe.to_parquet(f"{args.data_dir}/{args.month}_p{'_'.join([str(x) for x in args.pressure_qc])}_t{'_'.join([str(x) for x in args.temperature_qc])}_s{'_'.join([str(x) for x in args.salinity_qc])}_profiles.parquet", engine='pyarrow')

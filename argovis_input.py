@@ -1,11 +1,12 @@
-# replaces qc_filter.py for pre-qc-filtered monthly files dl'ed from argovis.
-# argovis json files should be named and sorted yyyy/yyyy-mm.json under --data-dir
+# argovis json files should be named *.json under --data-dir, which is assumed to correspond to a single month.
 import numpy, argparse, glob, pandas, json, datetime
 from helpers import helpers
 
 # argument setup
 parser = argparse.ArgumentParser()
 parser.add_argument("--data_dir", type=str, help="directory with Argovis JSON")
+parser.add_argument("--year", type=int, help="year to consider")
+parser.add_argument("--month", type=int, help="month to consider")
 parser.add_argument("--psc_filter", type=bool, help="whether or not to apply PSC-style profile filtering")
 args = parser.parse_args()
 
@@ -15,8 +16,8 @@ files = glob.glob(args.data_dir + '/*json')
 for file in files:
     print(args.data_dir, file)
 
-    year=int(file.split('/')[-1][0:4])
-    month=int(file.split('/')[-1][5:7])
+    year=args.year
+    month=args.month
     data = json.load(open(file, 'r'))
 
     julds = []
@@ -58,6 +59,7 @@ for file in files:
         cycle = data[i]['_id'].split('_')[1]
         geolocation_qc = data[i]['geolocation_argoqc']
         timestamp_qc = data[i]['timestamp_argoqc']
+        source = data[i]['source']
 
         if args.psc_filter:
             # PSC-esue filtering
@@ -74,9 +76,20 @@ for file in files:
             ## must have more than one level
             if len(pres) < 2:
                 continue
-            ## temp and psal lengths must match pressure
-            if len(pres) != len(temp) or len(pres) != len(psal):
+            ## must not have any negative pressures
+            ###if any(p < 0 for p in pres):
+            ###        continue
+            ### cludge to try and only count negative pressure from core levels:
+            pres_core = [x for x, m in zip(pres, temp_qc) if not m==None]
+            if any(p<0 for p in pres_core):
                 continue
+            ## non-null temp and psal lengths must match pressure
+            temp_scrub = [x for x in temp if not x==None]
+            psal_scrub = [x for x in psal if not x==None]
+            pres_scrub = [x for x in pres if not x==None]
+            if len(pres_scrub) != len(temp_scrub) or len(pres_scrub) != len(psal_scrub):
+                if len(source) == 1: # can only do this test for core profiles, argovis' merging makes this impossible to check in this way for bgc profiles.
+                    continue
             mangled_pressure = False
             for level_idx in range(len(pres) - 1):
                 if pres[level_idx] is not None and pres[level_idx + 1] is not None:

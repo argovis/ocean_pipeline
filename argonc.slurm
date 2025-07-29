@@ -4,7 +4,7 @@
 #SBATCH --nodes=1
 #SBATCH --ntasks-per-node=1
 #SBATCH --time=1:00:00
-#SBATCH --job-name=argovis-wod2mat
+#SBATCH --job-name=argonc_input
 #SBATCH --output=%x.%j.out
 #SBATCH --mail-type=FAIL
 #SBATCH --mail-user=katie.mills@colorado.edu
@@ -15,4 +15,4 @@ module load anaconda/2023.09
 conda activate wod2mat
 
 cd $SLURM_SUBMIT_DIR
-python argovis_input.py --data_dir $1 --year $2 --month $3 --psc_filter True
+python argonc_input.py --year $1 --month $2 --data_dir $3

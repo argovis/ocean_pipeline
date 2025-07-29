@@ -35,4 +35,8 @@ dict = {
     'profUncertaintyAggrMonth': [float("nan")]*len(df.to_dict(orient='list')['longitude']),
 }
 
+if 'direction' in df.columns:
+    # argonc preserves directions separately, carry it along
+    dict['argo_profile_direction'] = df.to_dict(orient='list')['direction']
+
 scipy.io.savemat(args.output_file, dict)
