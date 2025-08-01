@@ -2,10 +2,17 @@ import glob, os, sys, pandas, xarray, argparse
 from helpers import helpers
 
 # argument setup
+def parse_list(s):
+    return [int(x) for x in s.split(',')]
+
 parser = argparse.ArgumentParser()
 parser.add_argument("--year", type=int, help="Year to consider")
 parser.add_argument("--month", type=int, help="Month to consider")
+parser.add_argument("--temperature_qc", type=parse_list, help="temperature QC flags to accept")
+parser.add_argument("--salinity_qc", type=parse_list, help="salinity QC flags to accept")
+parser.add_argument("--pressure_qc", type=parse_list, help="pressure QC flags to accept")
 parser.add_argument("--data_dir", type=str, help="directory with Argovis JSON")
+parser.add_argument("--output_file", type=str, help="name of output file, with path.")
 args = parser.parse_args()
 
 year = args.year
@@ -26,7 +33,6 @@ psals_qc = []
 pressures_qc = []
 floats = []
 cycles = []
-directions = []
 flags = []
 
 dump = True
@@ -52,13 +58,16 @@ for fn in glob.glob(os.path.join(source_dir, '*.nc')):
     PLATFORM_NUMBER = int(xar['PLATFORM_NUMBER'].to_dict()['data'][0])
     CYCLE_NUMBER = int(xar['CYCLE_NUMBER'].to_dict()['data'][0])
     DIRECTION = xar['DIRECTION'].to_dict()['data'][0].decode('UTF-8')
+    cycle = str(CYCLE_NUMBER).zfill(3)
+    if DIRECTION == 'D':
+        cycle += 'D'
     DATA_MODE = xar['DATA_MODE'].to_dict()['data'][0].decode('UTF-8')
     filetype = 'argo_nc_https://www.seanoe.org/data/00311/42182#116315/'
     presvar = 'PRES'
     tempvar = 'TEMP'
     psalvar = 'PSAL'
     if DATA_MODE in ['A', 'D']:
-        prevar = 'PRES_ADJUSTED'
+        presvar = 'PRES_ADJUSTED'
         tempvar = 'TEMP_ADJUSTED'
         psalvar = 'PSAL_ADJUSTED'
     pres = xar[presvar].to_dict()['data'][0]
@@ -92,14 +101,13 @@ for fn in glob.glob(os.path.join(source_dir, '*.nc')):
 
     # drop lousy profiles (PSC style)
     ## data qc filter
-    if not all(x in (1, 2, None) for x in temp_qc):
+    if not all(x in args.temperature_qc or x is None for x in temp_qc):
         print('tempqc')
-        print(temp_qc)
         continue
-    if not all(x in (1, 2, None) for x in psal_qc):
+    if not all(x in args.salinity_qc or x is None for x in psal_qc):
         print('psalqc')
         continue
-    if not all(x in (1, 2, None) for x in pres_qc):
+    if not all(x in args.pressure_qc or x is None for x in pres_qc):
         print('presqc')
         continue
     ## must have good geolocation and timestamp qc
@@ -162,14 +170,12 @@ for fn in glob.glob(os.path.join(source_dir, '*.nc')):
     psals_qc.append(psal_qc)
     pressures_qc.append(pres_qc)
     floats.append(PLATFORM_NUMBER)
-    cycles.append(CYCLE_NUMBER)
-    directions.append(DIRECTION)
+    cycles.append(cycle)
     flags.append(0)
 
 df = pandas.DataFrame({
     'float': floats,
     'cycle': cycles,
-    'direction': directions,
     'juld': julds,
     'longitude': lons,
     'latitude': lats,
@@ -183,4 +189,4 @@ df = pandas.DataFrame({
     'flag': flags
 })
 
-df.to_parquet(f"{args.data_dir}/demo_{year}_{month}.parquet", engine='pyarrow')
+df.to_parquet(args.output_file, engine='pyarrow')

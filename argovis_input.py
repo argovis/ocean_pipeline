@@ -3,11 +3,18 @@ import numpy, argparse, glob, pandas, json, datetime
 from helpers import helpers
 
 # argument setup
+def parse_list(s):
+    return [int(x) for x in s.split(',')]
+
 parser = argparse.ArgumentParser()
 parser.add_argument("--data_dir", type=str, help="directory with Argovis JSON")
 parser.add_argument("--year", type=int, help="year to consider")
 parser.add_argument("--month", type=int, help="month to consider")
+parser.add_argument("--temperature_qc", type=parse_list, help="temperature QC flags to accept")
+parser.add_argument("--salinity_qc", type=parse_list, help="salinity QC flags to accept")
+parser.add_argument("--pressure_qc", type=parse_list, help="pressure QC flags to accept")
 parser.add_argument("--psc_filter", type=bool, help="whether or not to apply PSC-style profile filtering")
+parser.add_argument("--output_file", type=str, help="name of output file, with path.")
 args = parser.parse_args()
 
 files = glob.glob(args.data_dir + '/*json')
@@ -31,7 +38,6 @@ for file in files:
     psals_qc = []
     pressures_qc = []
     flags = []
-    #uids = []
     floats = []
     cycles = []
 
@@ -46,15 +52,11 @@ for file in files:
         temp_qc = data[i]['data'][data[i]['data_info'][0].index('temperature_argoqc')]
         psal_qc = data[i]['data'][data[i]['data_info'][0].index('salinity_argoqc')]
         pres_qc = data[i]['data'][data[i]['data_info'][0].index('pressure_argoqc')]
-        # temp_qc = [99]*len(temp)
-        # psal_qc = [99]*len(psal)
-        # pres_qc = [99]*len(pres)
         dt = datetime.datetime.strptime(data[i]['timestamp'], "%Y-%m-%dT%H:%M:%S.%fZ")
         filetype = 'argovis'
         juld = helpers.datetime_to_datenum(dt)
         lat = data[i]['geolocation']['coordinates'][1]
         lon = helpers.remap_longitude(data[i]['geolocation']['coordinates'][0])
-        #uid = p.uid()
         float = int(data[i]['_id'].split('_')[0])
         cycle = data[i]['_id'].split('_')[1]
         geolocation_qc = data[i]['geolocation_argoqc']
@@ -64,11 +66,11 @@ for file in files:
         if args.psc_filter:
             # PSC-esue filtering
             ## must have only QC 1 or 2 for every single pressure, temperature and salinity level
-            if not all(x in (1, 2, None) for x in temp_qc):
+            if not all(x in args.temperature_qc or x is None for x in temp_qc):
                 continue
-            if not all(x in (1, 2, None) for x in psal_qc):
+            if not all(x in args.salinity_qc or x is None for x in psal_qc):
                 continue
-            if not all(x in (1, 2, None) for x in pres_qc):
+            if not all(x in args.pressure_qc or x is None for x in pres_qc):
                 continue
             ## must have good geolocation and timestamp qc
             if geolocation_qc not in (1,2) or timestamp_qc not in (1,2):
@@ -119,7 +121,6 @@ for file in files:
         psals_qc.append(psal_qc)
         pressures_qc.append(pres_qc)
         flags.append(0)
-        #uids.append(uid)
         floats.append(float)
         cycles.append(cycle)
 
@@ -141,5 +142,4 @@ for file in files:
         'flag': flags
     })
 
-    # qc encoding hard coded for now
-    df.to_parquet(f"{args.data_dir}/{month}_p0_t0_s0_1_profiles.parquet", engine='pyarrow')
+    df.to_parquet(args.output_file, engine='pyarrow')

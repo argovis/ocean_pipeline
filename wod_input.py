@@ -18,9 +18,10 @@ parser.add_argument("--data_dir", type=str, help="directory with ASCII WOD data"
 parser.add_argument("--year", type=int, help="year to consider")
 parser.add_argument("--month", type=int, help="month to consider")
 parser.add_argument("--filetypes", type=strlist, help="WOD file types as a CSV string, like 'PFL,MRB,CTD'....")
-parser.add_argument("--temperature_qc", type=parse_list, help="temperature QC flag to accept")
-parser.add_argument("--salinity_qc", type=parse_list, help="salinity QC flag to accept")
-parser.add_argument("--pressure_qc", type=parse_list, help="pressure QC flag to accept")
+parser.add_argument("--temperature_qc", type=parse_list, help="temperature QC flags to accept")
+parser.add_argument("--salinity_qc", type=parse_list, help="salinity QC flags to accept")
+parser.add_argument("--pressure_qc", type=parse_list, help="pressure QC flags to accept")
+parser.add_argument("--output_file", type=str, help="name of output file, with path.")
 args = parser.parse_args()
 
 files = []
@@ -104,4 +105,4 @@ dataframe =
     })
 
 
-dataframe.to_parquet(f"{args.data_dir}/{args.month}_p{'_'.join([str(x) for x in args.pressure_qc])}_t{'_'.join([str(x) for x in args.temperature_qc])}_s{'_'.join([str(x) for x in args.salinity_qc])}_profiles.parquet", engine='pyarrow')
+dataframe.to_parquet(args.output_file, engine='pyarrow')
