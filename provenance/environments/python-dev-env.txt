@@ -1,5 +1,5 @@
 # list generated with pip list --format=freeze from CU conda environment 'wod2mat' 2025-08-01
-# reflects pythonic environment used through initial testing and development.
+# reflects python 3.9.x environment used through initial testing and development.
 
 aiobotocore==2.5.0
 aiofiles==22.1.0

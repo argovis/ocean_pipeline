@@ -1,5 +1,7 @@
 This project got its start as a handoff and generalization from Argo netCDF -> localGP ingestion scripts included in the original localGP matlab repo. We include here some notes and scripts on validation exercises performed to make sure this repo was making the same selections as the original localGP authors, before embarking on future iterations.
 
+All scripts run in the pythonic environment described in provenance/environments/python-dev-env.txt.
+
 ## Argovis -> localGP validation
 
  - Downloaded a snapshot of Argo profiles as represented by Argovis in early July 2025
