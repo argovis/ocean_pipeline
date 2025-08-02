@@ -4,7 +4,7 @@
 
 # set your run configuration here----------------------------------------------------------------
 
-declare upstream='argovis' 			# 'argovis', 'wod' or 'argonc'
+declare upstream='argonc' 			# 'argovis', 'wod' or 'argonc'
 declare data_dir=$1				# where is the relevant upstream data?
 declare year=$2					# year this data corresponds to
 declare month=$3				# month this data corresponds to
