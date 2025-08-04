@@ -1,4 +1,4 @@
-import numpy, datetime, scipy.interpolate, scipy.integrate, math, operator, juliandate, bisect
+import numpy, datetime, scipy.interpolate, scipy.integrate, math, operator, juliandate, bisect, warnings, xarray
 
 def mljul(year, month, day, time):
     # compute something appropriate to interpret as matlab's julian day
@@ -166,13 +166,14 @@ def interpolate_to_levels(row, var, levels, pressure_buffer=100.0, pressure_inde
         interp = scipy.interpolate.PchipInterpolator(pressure[p_bracket[0]:p_bracket[1]+1], variable[p_bracket[0]:p_bracket[1]+1], extrapolate=False)(levels)
 
         # if there wasn't a measured level within a certain radius of each level of interest, mask the interpolation at that level.
-        interp = mask_far_interps(pressure[p_bracket[0]:p_bracket[1]+1], levels, interp)
+        #interp = mask_far_interps(pressure[p_bracket[0]:p_bracket[1]+1], levels, interp)
 
         return interp, flag
 
 def integrate_roi(pressure, variable, low_roi, high_roi):
     # trapezoidal integration of <variable> over <pressure> from <low_roi> to <high_roi>.
     # will error out if <low_roi> and/or <high_roi> are not found in <pressure>.
+    # will return nan if any nans in pressure or variable
 
     low_i = int(numpy.where(pressure == low_roi)[0][0])
     high_i = int(numpy.where(pressure == high_roi)[0][0])
@@ -193,9 +194,9 @@ def filterQCandPressure(t,s,p, t_qc,s_qc,p_qc, pressure_qc, temperature_qc, sali
 
 def mask_far_interps(measured_pressures, interp_levels, interp_values):
     # mask interpolated values that are too far from the nearest measured pressure
-    
+
     for i, level in enumerate(interp_levels):
-        ## determine how far is too far: 
+        ## determine how far is too far:
         radius = 0
         if level < 100:
             radius = 10
@@ -318,3 +319,21 @@ def pchip_search(target, init_min, init_max, init_step, row, variable):
     else:
         return None
 
+def safe_open_dataset(fn):
+    with warnings.catch_warnings(record=True) as w:
+        warnings.simplefilter("always", RuntimeWarning)
+        try:
+            xar = xarray.open_dataset(fn)
+        except Exception as e:
+            print(f"❌ Could not open {fn}: {e}")
+            return None
+
+        for warning in w:
+            if "invalid value encountered in cast" in str(warning.message):
+                # happens once in a while, seems like an automatic time conversion choke
+                date = xar['JULD'].to_dict()['data'][0]
+                juldqc = int(xar['JULD_QC'].to_dict()['data'][0])
+                refdate = xar['REFERENCE_DATE_TIME'].to_dict()['data']
+                print(f"⚠️ Time cast warning in: {fn}; JULD: {str(date)}, JULD_QC: {juldqc}, REFERENCE_DATE_TIME: {refdate}")
+
+        return xar

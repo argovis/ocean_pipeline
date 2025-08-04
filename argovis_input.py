@@ -1,12 +1,20 @@
-# replaces qc_filter.py for pre-qc-filtered monthly files dl'ed from argovis.
-# argovis json files should be named and sorted yyyy/yyyy-mm.json under --data-dir
+# argovis json files should be named *.json under --data-dir, which is assumed to correspond to a single month.
 import numpy, argparse, glob, pandas, json, datetime
 from helpers import helpers
 
 # argument setup
+def parse_list(s):
+    return [int(x) for x in s.split(',')]
+
 parser = argparse.ArgumentParser()
 parser.add_argument("--data_dir", type=str, help="directory with Argovis JSON")
+parser.add_argument("--year", type=int, help="year to consider")
+parser.add_argument("--month", type=int, help="month to consider")
+parser.add_argument("--temperature_qc", type=parse_list, help="temperature QC flags to accept")
+parser.add_argument("--salinity_qc", type=parse_list, help="salinity QC flags to accept")
+parser.add_argument("--pressure_qc", type=parse_list, help="pressure QC flags to accept")
 parser.add_argument("--psc_filter", type=bool, help="whether or not to apply PSC-style profile filtering")
+parser.add_argument("--output_file", type=str, help="name of output file, with path.")
 args = parser.parse_args()
 
 files = glob.glob(args.data_dir + '/*json')
@@ -15,8 +23,8 @@ files = glob.glob(args.data_dir + '/*json')
 for file in files:
     print(args.data_dir, file)
 
-    year=int(file.split('/')[-1][0:4])
-    month=int(file.split('/')[-1][5:7])
+    year=args.year
+    month=args.month
     data = json.load(open(file, 'r'))
 
     julds = []
@@ -30,7 +38,6 @@ for file in files:
     psals_qc = []
     pressures_qc = []
     flags = []
-    #uids = []
     floats = []
     cycles = []
 
@@ -44,39 +51,57 @@ for file in files:
         temp_qc = data[i]['data'][data[i]['data_info'][0].index('temperature_argoqc')]
         psal_qc = data[i]['data'][data[i]['data_info'][0].index('salinity_argoqc')]
         pres_qc = data[i]['data'][data[i]['data_info'][0].index('pressure_argoqc')]
-        # temp_qc = [99]*len(temp)
-        # psal_qc = [99]*len(psal)
-        # pres_qc = [99]*len(pres)
         dt = datetime.datetime.strptime(data[i]['timestamp'], "%Y-%m-%dT%H:%M:%S.%fZ")
         filetype = 'argovis'
         juld = helpers.datetime_to_datenum(dt)
         lat = data[i]['geolocation']['coordinates'][1]
         lon = helpers.remap_longitude(data[i]['geolocation']['coordinates'][0])
-        #uid = p.uid()
         float = int(data[i]['_id'].split('_')[0])
         cycle = data[i]['_id'].split('_')[1]
         geolocation_qc = data[i]['geolocation_argoqc']
         timestamp_qc = data[i]['timestamp_argoqc']
+        source = data[i]['source']
 
         if args.psc_filter:
             # PSC-esue filtering
+            ## must have only QC 1 or 2 for every single pressure, temperature and salinity level
+            if not all(x in args.temperature_qc or x is None for x in temp_qc):
+                continue
+            if not all(x in args.salinity_qc or x is None for x in psal_qc):
+                continue
+            if not all(x in args.pressure_qc or x is None for x in pres_qc):
+                continue
             ## must have good geolocation and timestamp qc
-            if geolocation_qc != 1 or timestamp_qc != 1:
+            if geolocation_qc not in (1,2) or timestamp_qc not in (1,2):
                 continue
             ## must have more than one level
             if len(pres) < 2:
                 continue
-            ## temp and psal lengths must match pressure
-            if len(pres) != len(temp) or len(pres) != len(psal):
+            ## must not have any negative pressures
+            ###if any(p < 0 for p in pres):
+            ###        continue
+            ### cludge to try and only count negative pressure from core levels:
+            pres_core = [x for x, m in zip(pres, temp_qc) if not m==None]
+            if any(p<0 for p in pres_core):
                 continue
+            ## non-null temp and psal lengths must match pressure
+            temp_scrub = [x for x in temp if not x==None]
+            psal_scrub = [x for x in psal if not x==None]
+            pres_scrub = [x for x in pres if not x==None]
+            if len(pres_scrub) != len(temp_scrub) or len(pres_scrub) != len(psal_scrub):
+                if len(source) == 1: # can only do this test for core profiles, argovis' merging makes this impossible to check in this way for bgc profiles.
+                    continue
+            mangled_pressure = False
             for level_idx in range(len(pres) - 1):
                 if pres[level_idx] is not None and pres[level_idx + 1] is not None:
                     ## pressure levels must be ascending
                     if pres[level_idx + 1] <= pres[level_idx]:
-                        continue
+                        mangled_pressure = True
                     ## gaps larger than 200 dbar are not allowed
                     if pres[level_idx + 1] - pres[level_idx] > 200:
-                        continue
+                        mangled_pressure = True
+            if mangled_pressure:
+                continue
             ## at least 100 dbar in extent
             if pres[0] is not None and pres[-1] is not None and (pres[-1] - pres[0] < 100):
                 continue
@@ -95,7 +120,6 @@ for file in files:
         psals_qc.append(psal_qc)
         pressures_qc.append(pres_qc)
         flags.append(0)
-        #uids.append(uid)
         floats.append(float)
         cycles.append(cycle)
 
@@ -117,5 +141,4 @@ for file in files:
         'flag': flags
     })
 
-    # qc encoding hard coded for now
-    df.to_parquet(f"{args.data_dir}/{month}_p0_t0_s0_1_profiles.parquet", engine='pyarrow')
+    df.to_parquet(args.output_file, engine='pyarrow')
