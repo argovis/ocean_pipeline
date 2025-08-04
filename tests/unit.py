@@ -136,13 +136,14 @@ def test_interpolate_to_levels():
     assert numpy.allclose(helpers.interpolate_to_levels(df.iloc[0], 'temperature', [1.5,2.5,3.5,4.5])[0], [15,25,35,45]), 'basic interp'
     assert numpy.allclose(helpers.interpolate_to_levels(df.iloc[0], 'temperature', [1.5,2.5,3.5,4.5])[1], 0), 'basic interp flagging'
     assert numpy.allclose(helpers.interpolate_to_levels(df.iloc[0], 'temperature', [2,4,6])[0], [20,40, numpy.nan], equal_nan=True), 'dont run off end of insitu data'
+    assert numpy.allclose(helpers.interpolate_to_levels(df.iloc[0], 'temperature', [0.9999,2,4])[0], [numpy.nan,20,40], equal_nan=True), 'dont run off start of insitu data'
     assert numpy.allclose(helpers.interpolate_to_levels(df.iloc[1], 'temperature', [2,4,6])[0], [numpy.nan,40,numpy.nan], equal_nan=True), 'degenerate profile'
     assert numpy.allclose(helpers.interpolate_to_levels(df.iloc[1], 'temperature', [2,4,6])[1], 1), 'degenerate profile flagging'
 
 def test_integration_regions():
 
-    pressure = numpy.array([0,2,4,6,8,10,12,14,16,18,20,22,24,26,28,30])
-    var = numpy.array([0,1,2,3,4,5,6,7,8,9,10,11,12,13,14,15])
+    pressure = numpy.array([0,2,4,6,8,10,12,14,16,18,20,22,24,26,28,30,32])
+    var = numpy.array([0,1,2,3,4,5,6,7,8,9,10,11,12,13,14,15,numpy.nan])
 
     assert numpy.allclose(helpers.integration_region([0,10], pressure, var), [25]), 'basic integration'
 

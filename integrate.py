@@ -1,12 +1,6 @@
 import numpy, argparse, pandas, scipy
 from helpers import helpers
 
-pandas.set_option('display.max_rows', None)
-pandas.set_option('display.max_columns', None)
-pandas.set_option('display.max_colwidth', None)
-pandas.set_option('display.width', None)
-pandas.set_option('display.expand_frame_repr', False)
-
 def parse_pair(s):
     return [float(x) for x in s.split(',')]
 
