@@ -42,7 +42,6 @@ for file in files:
     cycles = []
 
     # loops profiles
-
     for i in range(len(data)):
 
         # variable extraction

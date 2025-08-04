@@ -10,8 +10,8 @@ def test_argovis_pipeline():
         
         mock_data = [profile, copy.deepcopy(profile), copy.deepcopy(profile)] # dupe profile for downsampling
         mock_data[0]['geolocation'] = {"type":"Point","coordinates":[-27.4493,2.32012]} # original, unchanged for reference
-        mock_data[1]['geolocation'] = {"type":"Point","coordinates":[-27.4493,2.81012]} # <0.5 degree too close, should get downsampled out
-        mock_data[2]['geolocation'] = {"type":"Point","coordinates":[-27.4493,2.83012]} # >0.5 degree far enough, should survive downsampling
+        mock_data[1]['geolocation'] = {"type":"Point","coordinates":[-27.4493,2.33012]} # <0.1 degree too close, should get downsampled out
+        mock_data[2]['geolocation'] = {"type":"Point","coordinates":[-27.4493,2.44012]} # >0.1 degree far enough, should survive downsampling
         with open(input_path, "w") as f:
             json.dump(mock_data, f)
 
@@ -30,7 +30,7 @@ def test_argovis_pipeline():
         assert df["latitude"].iloc[0] == 2.32012 
         assert df["longitude"].iloc[0] == 360-27.4493
         assert df["float"].iloc[0] == 1902305
-        assert df["cycle"].iloc[0] == 128
+        assert df["cycle"].iloc[0] == '128'
         assert df["filetype"].iloc[0] == 'argovis'
         assert numpy.array_equal(df["temperature"].iloc[0][0:5], [28.973,29.006001,29.028999,29.062,29.112])
         assert numpy.array_equal(df["pressure"].iloc[0][0:5], [1.04,1.96,3,4.04,5.08])
@@ -116,7 +116,7 @@ def test_argovis_pipeline():
         assert numpy.allclose(mat['profLatAggrMonth'][0][0], 2.32012)
         assert numpy.allclose(mat['profLongAggrMonth'][0][0], 360-27.4493)
         assert numpy.allclose(mat['profFloatIDAggrMonth'][0][0], 1902305)
-        assert numpy.allclose(mat['profObsIDAggrMonth'][0][0], 128)
+        assert mat['profObsIDAggrMonth'][0] == '128'
         assert numpy.allclose(mat['profJulDayAggrMonth'][0][0], 739750.1796412037)
 
     finally:

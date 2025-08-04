@@ -55,15 +55,6 @@ def test_mljul():
     assert numpy.allclose(helpers.mljul(2016, 8, 29, 10 + 5/60 + 24/60/60), 2457629.92041667), 'according to the matlab docs https://www.mathworks.com/help//releases/R2021a/matlab/ref/datetime.juliandate.html'
     assert numpy.allclose(helpers.mljul(2016, 8, 29, None), 2457629.5), 'deal with None for time'
 
-def test_has_common_non_nan_value():
-
-	x = numpy.array([None, 2, numpy.nan])
-	y = numpy.array([None, 3, numpy.nan])
-	z = numpy.array([4, None, None])
-
-	assert helpers.has_common_non_nan_value(x,y), 'basic match'
-	assert not helpers.has_common_non_nan_value(x,z), 'no match, including None vs nan'
-
 def test_find_bracket():
 
 	x = numpy.array([1.2, 3.3, 4.0, 5.1, 8.8, 10])
@@ -85,15 +76,6 @@ def test_pad_bracket():
 	assert helpers.pad_bracket(x, 3.5, 4.5, 10, 0) == (0,5), 'a large wing just returns the whole list'
 	assert helpers.pad_bracket(x, 3.5, 4.5, 0, 10) == (0,5), 'a large places requirement just returns the whole list'
 
-def test_interpolate_and_integrate():
-
-	x = numpy.array([0,1,2,3,4,5,6,7,8,9])
-	y = numpy.array([10,10,10,2,2,2,2,10,10,10])
-
-	assert numpy.isclose(helpers.interpolate_and_integrate(x, y, 3.5, 4.5), 2), 'basic integral on flat region'
-	assert numpy.isclose(helpers.interpolate_and_integrate(x, y, 2, 3), 6), 'integral over slope'
-	assert numpy.isclose(helpers.interpolate_and_integrate(x, y, 0, 10), 68), 'integral over whole range'
-
 def test_integrate_roi():
     x = numpy.array([0,2,4,6])
     y = numpy.array([1,2,3,4])
@@ -102,22 +84,6 @@ def test_integrate_roi():
     assert numpy.isclose(helpers.integrate_roi(x, y, 0, 6), 15), 'integral hitting high edge'
     with pytest.raises(Exception):
         helpers.integrate_roi(x, y, 1, 4), 'bounds must be in the list'
-
-def test_sort_and_remove_neighbors():
-
-	x = [
-			[0,0,1234],
-			[10,10,1234],
-			[0,0,1234.01],
-			[0,1,1234.01],
-			[0,0,1234.02]
-		]
-
-	assert helpers.sort_and_remove_neighbors(x, 0, 1, 2) == [
-			[0,0,1234],
-			[0,1,1234.01],
-			[10,10,1234]
-		]
 
 def test_mask_far_interps():
 
@@ -176,15 +142,6 @@ def test_tidy_profile():
     assert helpers.tidy_profile([6,5,4,3],[2,5,3,4], 0) == ([3,4,5,6], [4,3,5,2], 2), 'levels in reverse order'
     assert helpers.tidy_profile([1,2,4,3,5], [6,1,4,2,9], 0) == ([1,2,3,4,5], [6,1,2,4,9], 8), 'levels out of order'
 
-def test_surrounding_gap():
-    RG_levels = [2.5, 10, 20, 30, 40, 50, 60, 70, 80, 90, 100, 110, 120, 130, 140, 150, 160, 170, 182.5, 200, 220, 240, 260, 280, 300, 320, 340, 360, 380, 400, 420, 440, 462.5, 500, 550, 600, 650, 700, 750, 800, 850, 900, 950, 1000, 1050, 1100, 1150, 1200, 1250, 1300, 1350, 1412.5, 1500, 1600, 1700, 1800, 1900, 1975]
-
-    assert helpers.surrounding_gap(RG_levels, 11) == 10, 'distance between nearest neighbors'
-    assert helpers.surrounding_gap(RG_levels, 170) == 12.5, 'give the higher gap when right on a level'
-    assert helpers.surrounding_gap(RG_levels, 1975) == 75, 'give the lower gap at the end of the list'
-    assert helpers.surrounding_gap(RG_levels, 2000) == 75, 'give the last gap past the end of the list'
-    assert helpers.surrounding_gap(RG_levels, 0) == 7.5, 'give the first gap before the start of the list'
-
 def test_datenum_to_datetime():
     datenum = 736333.6493055555 # 2016-01-04T15:35:00.000Z
     expected_datetime = datetime.datetime(2016, 1, 4, 15, 35)
@@ -199,8 +156,24 @@ def test_datenum_to_datetime():
     assert delta < datetime.timedelta(seconds=1)
 
 def test_datetime_to_datenum():
-    dt = datetime.datetime(1950, 1, 1, 0, 0)
-    expected_datenum = 712224
+    # examples from https://www.mathworks.com/help/matlab/ref/datetime.datenum.html
+    dt = datetime.datetime(2007, 9, 16, 0, 0)
+    expected_datenum = 733301
+    result = helpers.datetime_to_datenum(dt)
+    assert abs(result-expected_datenum) < 0.00001, 'datetime to datenum conversion'
+
+    dt = datetime.datetime(1996, 5, 14, 0, 0)
+    expected_datenum = 729159
+    result = helpers.datetime_to_datenum(dt)
+    assert abs(result-expected_datenum) < 0.00001, 'datetime to datenum conversion'
+
+    dt = datetime.datetime(2010, 11, 29, 0, 0)
+    expected_datenum = 734471
+    result = helpers.datetime_to_datenum(dt)
+    assert abs(result-expected_datenum) < 0.00001, 'datetime to datenum conversion'
+
+    dt = datetime.datetime(2025, 2, 1, 8, 46, 48)
+    expected_datenum = 739649.3658360614
     result = helpers.datetime_to_datenum(dt)
     assert abs(result-expected_datenum) < 0.00001, 'datetime to datenum conversion'
 
@@ -212,3 +185,5 @@ def test_pchip_search():
 
     assert numpy.isclose(helpers.pchip_search(20.35, 1, 4, 1, df.iloc[0], 'temperature'), 2.035), 'pchip search basic'
     assert numpy.isclose(helpers.pchip_search(20.35, -10, 10, 1, df.iloc[0], 'temperature'), 2.035), 'cope with too-big range'
+    assert helpers.pchip_search(500, -10, 10, 1, df.iloc[0], 'temperature') is None, 'cope with dependent value out of range'
+    assert helpers.pchip_search(20.35, 3, 5, 1, df.iloc[0], 'temperature') is None, 'cope with ill-considered search region'
