@@ -1,11 +1,9 @@
 #!/bin/bash
-#SBATCH --qos=blanca-giglio
-#SBATCH --account=blanca-giglio
-#SBATCH --partition=blanca-giglio
+#SBATCH --qos=preemptable
 #SBATCH --export=NONE
 #SBATCH --nodes=1
 #SBATCH --ntasks-per-node=1
-#SBATCH --time=72:00:00
+#SBATCH --time=12:00:00
 #SBATCH --job-name=argonc_input
 #SBATCH --output=%x.%j.out
 #SBATCH --mail-type=FAIL
