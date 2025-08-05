@@ -176,5 +176,5 @@ df = pandas.DataFrame({
     'flag': flags
 })
 
-rejects.to_parquet(os.path.join(source_dir, os.path.basename(args.output_file) + '_rejects.parquet'), engine='pyarrow')
+rejects.to_parquet(os.path.join(source_dir, os.path.basename(args.output_file).split('.')[0] + '_rejects.parquet'), engine='pyarrow')
 df.to_parquet(args.output_file, engine='pyarrow')
