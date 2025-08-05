@@ -99,8 +99,7 @@ def test_argovis_pipeline():
         downsample = glob.glob(downsample_out)
         df = pd.read_parquet(downsample[0])
         # basic downsample check
-        #assert df.shape[0] == 2, "Downsampled file should have only two rows left"
-        assert df.shape[0] == 3, "downsampling suppressed for now"
+        assert df.shape[0] == 2, "Downsampled file should have only two rows left"
 
         # 5. matlab_convert.py
         matlab_out = os.path.join(tmpdir, "converted.mat")

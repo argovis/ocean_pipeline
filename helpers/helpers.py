@@ -166,7 +166,7 @@ def interpolate_to_levels(row, var, levels, pressure_buffer=100.0, pressure_inde
         interp = scipy.interpolate.PchipInterpolator(pressure[p_bracket[0]:p_bracket[1]+1], variable[p_bracket[0]:p_bracket[1]+1], extrapolate=False)(levels)
 
         # if there wasn't a measured level within a certain radius of each level of interest, mask the interpolation at that level.
-        #interp = mask_far_interps(pressure[p_bracket[0]:p_bracket[1]+1], levels, interp)
+        interp = mask_far_interps(pressure[p_bracket[0]:p_bracket[1]+1], levels, interp)
 
         return interp, flag
 
@@ -208,16 +208,8 @@ def mask_far_interps(measured_pressures, interp_levels, interp_values):
             radius = 60
         elif level < 450:
             radius = 80
-        elif level < 550:
-            radius = 100
-        elif level < 650:
-            radius = 120
-        elif level < 750:
-            radius = 140
-        elif level < 850:
-            radius = 160
         else:
-            radius = 180
+            radius = 100
 
         i_below = 0
         i_above = len(measured_pressures)-1

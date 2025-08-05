@@ -18,7 +18,6 @@ args = parser.parse_args()
 year = args.year
 month = f'{args.month:02d}'
 
-#source_dir = f'/scratch/alpine/wimi7695/argo_doi_2025/sorted/{year}_{month}'
 source_dir = args.data_dir
 
 julds = []
@@ -34,8 +33,6 @@ pressures_qc = []
 floats = []
 cycles = []
 flags = []
-
-dump = True
 
 for fn in glob.glob(os.path.join(source_dir, '*.nc')):
     print(fn)
@@ -77,27 +74,6 @@ for fn in glob.glob(os.path.join(source_dir, '*.nc')):
     temp_qc = [int(qc) if type(qc) is bytes else None for qc in xar[tempvar+'_QC'].to_dict()['data'][0]]
     psal_qc = [int(qc) if type(qc) is bytes else None for qc in xar[psalvar+'_QC'].to_dict()['data'][0]]
     PRES_ADJUSTED_ERROR = xar['PRES_ADJUSTED_ERROR'].to_dict()['data'][0]
-
-    if dump:
-        print('N_PARAM', N_PARAM)
-        print('JULD', JULD)
-        print('JULD_QC', JULD_QC)
-        print('LONGITUDE', LONGITUDE)
-        print('LATITUDE', LATITUDE)
-        print('POSITION_QC', POSITION_QC)
-        print('PLATFORM_NUMBER', PLATFORM_NUMBER)
-        print('CYCLE_NUMBER', CYCLE_NUMBER)
-        print('DIRECTION', DIRECTION)
-        print('DATA_MODE', DATA_MODE)
-        print('pres', pres)
-        print('temp', temp)
-        print('psal', psal)
-        print('pres_qc', pres_qc)
-        print('temp_qc', temp_qc)
-        print('psal_qc', psal_qc)
-        print('PRES_ADJUSTED_ERROR', PRES_ADJUSTED_ERROR)
-        dump = False
-
 
     # drop lousy profiles (PSC style)
     ## data qc filter
