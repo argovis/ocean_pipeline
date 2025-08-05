@@ -13,9 +13,9 @@ declare vartype='integration'                   # 'integration', 'interpolation'
 declare variable='potential_temperature'        # 'absolute_salinity', 'potential_temperature', 'conservative_temperature', 'potential_density', 'mld'
 declare level=10                                # dbar to interpolate to in interpolation mode
 declare region='15,300'                         # integration dbar region, string CSV, in integration mode
-declare pqc='1,2'                                   # qc to keep for pressure, can be single valued (0) or string CSV ('0,1')
-declare tqc='1,2'                                   # qc to keep for temeprature
-declare sqc='1,2'                               # qc to keep for salinity
+declare pqc=1                                   # qc to keep for pressure, can be single valued (0) or string CSV ('0,1')
+declare tqc=1                                   # qc to keep for temeprature
+declare sqc=1                               # qc to keep for salinity
 declare wod_filetypes='PFL,MRB,CTD'		# WOD filetypes, wod only
 
 # don't touch below this line -------------------------------------------------------------------
