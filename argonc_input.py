@@ -1,4 +1,4 @@
-import glob, os, sys, pandas, xarray, argparse, numpy
+import glob, os, sys, pandas, xarray, argparse, numpy, datetime
 from helpers import helpers
 
 # argument setup
@@ -34,7 +34,7 @@ floats = []
 cycles = []
 flags = []
 
-rejects = pandas.DataFrame(columns=['float', 'cycle', 'longitude', 'latitude', 'position_qc', 'juld_qc', 'startup', 'APEX', 'pressure_sort', 'realtime', 'adjusted'])
+rejects = pandas.DataFrame(columns=['float', 'cycle', 'longitude', 'latitude', 'position_qc', 'juld_qc', 'startup', 'APEX', 'pressure_sort', 'no_realtime', 'require_delayed'])
 
 for fn in glob.glob(os.path.join(source_dir, '*.nc')):
     print(fn)
@@ -83,8 +83,8 @@ for fn in glob.glob(os.path.join(source_dir, '*.nc')):
     startup = False
     apex = False
     pressure_sort = False
-    realtime = False
-    adjusted = False
+    no_realtime = False
+    require_delayed = False
     ## QC 1 position
     if POSITION_QC != 1:
         position_qc = True
@@ -100,14 +100,15 @@ for fn in glob.glob(os.path.join(source_dir, '*.nc')):
     ## pressure out of order, more than 2.4dbar
     if any(x[0] - x[1] > 2.4 for x in zip(pres, pres[1:])):
         pressure_sort = True
-    ## no realtime variables
+    ## no realtime variables ever
     if DATA_MODE == 'R':
-        realtime = True 
-    ## no realtime or adjusted variables (ie delayed only)
+        no_realtime = True
+    ## delayed mode only 5+ years in the past
+    #if JULD < datetime.datetime(2020,1,1) and DATA_MODE != 'D':
     if DATA_MODE != 'D':
-        adjusted = True
+        require_delayed = True
     ## if any of these are true, reject the profile
-    if position_qc or juld_qc or startup or apex or pressure_sort or realtime or adjusted:
+    if position_qc or juld_qc or startup or apex or pressure_sort or no_realtime or require_delayed:
         rejects.loc[len(rejects)] = {
             'float': PLATFORM_NUMBER,
             'cycle': cycle,
@@ -118,8 +119,8 @@ for fn in glob.glob(os.path.join(source_dir, '*.nc')):
             'startup': startup,
             'APEX': apex,
             'pressure_sort': pressure_sort,
-            'realtime': realtime,
-            'adjusted': adjusted
+            'no_realtime': no_realtime,
+            'require_delayed': require_delayed
         }
         continue
 
