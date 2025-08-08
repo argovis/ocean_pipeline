@@ -1,4 +1,4 @@
-import numpy, argparse, pandas, scipy
+import numpy, argparse, pandas, scipy, os
 from helpers import helpers
 
 def parse_pair(s):
@@ -34,6 +34,8 @@ df[args.variable+'_integration'] = df.apply(
 df = df.drop(columns=[args.variable+'_comb'])
 
 # dump any rows that failed to integrate
+rejects = df[df[args.variable+'_integration'].apply(lambda x: numpy.isnan(x[0]) )].reset_index(drop=True)
 df = df[~df[args.variable+'_integration'].apply(lambda x: numpy.isnan(x[0]) )].reset_index(drop=True)
 
+rejects.to_parquet(os.path.join(args.output_file.split('.')[0] + '_rejects.parquet'), engine='pyarrow')
 df.to_parquet(args.output_file, engine='pyarrow')

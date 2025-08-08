@@ -1,4 +1,4 @@
-import glob, os, sys, pandas, xarray, argparse
+import glob, os, sys, pandas, xarray, argparse, numpy, datetime
 from helpers import helpers
 
 # argument setup
@@ -33,6 +33,8 @@ pressures_qc = []
 floats = []
 cycles = []
 flags = []
+
+rejects = pandas.DataFrame(columns=['float', 'cycle', 'longitude', 'latitude', 'position_qc', 'juld_qc', 'startup', 'APEX', 'pressure_sort', 'no_realtime', 'require_delayed'])
 
 for fn in glob.glob(os.path.join(source_dir, '*.nc')):
     print(fn)
@@ -75,64 +77,73 @@ for fn in glob.glob(os.path.join(source_dir, '*.nc')):
     psal_qc = [int(qc) if type(qc) is bytes else None for qc in xar[psalvar+'_QC'].to_dict()['data'][0]]
     PRES_ADJUSTED_ERROR = xar['PRES_ADJUSTED_ERROR'].to_dict()['data'][0]
 
-    # drop lousy profiles (PSC style)
-    ## data qc filter
-    if not all(x in args.temperature_qc or x is None for x in temp_qc):
-        print('tempqc')
-        continue
-    if not all(x in args.salinity_qc or x is None for x in psal_qc):
-        print('psalqc')
-        continue
-    if not all(x in args.pressure_qc or x is None for x in pres_qc):
-        print('presqc')
-        continue
-    ## must have good geolocation and timestamp qc
-    if POSITION_QC not in (1,2) or JULD_QC not in (1,2):
-        print('position/time qc')
-        continue
-    ## must have more than one level
-    if len(pres) < 2:
-        print('len')
-        continue
-    ## must not have any negative pressures
-    if any(p < 0 for p in pres):
-        print('negpres')
-        continue
-    ## must have non-silly location
-    if LATITUDE > 90 or LATITUDE < -90 or LONGITUDE > 180 or LONGITUDE < -180:
-        print('lat lon range')
-        continue
-    ## non-null temp and psal lengths must match pressure
-    temp_scrub = [x for x in temp if not x==None]
-    psal_scrub = [x for x in psal if not x==None]
-    pres_scrub = [x for x in pres if not x==None]
-    if len(pres_scrub) != len(temp_scrub) or len(pres_scrub) != len(psal_scrub):
-        print('length mismatch')
-        continue
-    mangled_pressure = False
-    for level_idx in range(len(pres) - 1):
-        if pres[level_idx] is not None and pres[level_idx + 1] is not None:
-            ## pressure levels must be ascending
-            if pres[level_idx + 1] <= pres[level_idx]:
-                mangled_pressure = True
-            ## gaps larger than 200 dbar are not allowed
-            if pres[level_idx + 1] - pres[level_idx] > 200:
-                mangled_pressure = True
-    if mangled_pressure:
-        print('mangled pressure')
-        continue
-    ## at least 100 dbar in extent
-    if pres[0] is not None and pres[-1] is not None and (pres[-1] - pres[0] < 100):
-        print('100 dbar')
-        continue
+    # drop lousy profiles
+    position_qc = False
+    juld_qc = False
+    startup = False
+    apex = False
+    pressure_sort = False
+    no_realtime = False
+    require_delayed = False
+    ## QC 1 position
+    if POSITION_QC != 1:
+        position_qc = True
+    ## QC 1 time
+    if JULD_QC != 1:
+        juld_qc = True
     ## no startup cycles
     if CYCLE_NUMBER == 0:
-        print('startup')
-        continue
-    ## no funky APEX floats
+        startup = True
+    ## bad APEX floats
     if 20 in PRES_ADJUSTED_ERROR:
-        print('apex')
+        apex = True
+    ## pressure out of order, more than 2.4dbar
+    if any(x[0] - x[1] > 2.4 for x in zip(pres, pres[1:])):
+        pressure_sort = True
+    ## no realtime variables ever
+    #if DATA_MODE == 'R':
+    #    no_realtime = True
+    ## delayed mode only 5+ years in the past
+    if JULD < datetime.datetime(2020,1,1) and DATA_MODE != 'D':
+        require_delayed = True
+    ## if any of these are true, reject the profile
+    if position_qc or juld_qc or startup or apex or pressure_sort or no_realtime or require_delayed:
+        rejects.loc[len(rejects)] = {
+            'float': PLATFORM_NUMBER,
+            'cycle': cycle,
+            'longitude': LONGITUDE,
+            'latitude': LATITUDE,
+            'position_qc': position_qc,
+            'juld_qc': juld_qc,
+            'startup': startup,
+            'APEX': apex,
+            'pressure_sort': pressure_sort,
+            'no_realtime': no_realtime,
+            'require_delayed': require_delayed
+        }
         continue
+
+    # filter off bad levels
+    levels = list(zip(pres, pres_qc, temp, temp_qc, psal, psal_qc))
+    dump_levels = []
+    for i, level in enumerate(levels):
+        lvl_pres, lvl_pres_qc, lvl_temp, lvl_temp_qc, lvl_psal, lvl_psal_qc = level
+        ## must have pressure and temperature
+        if lvl_pres in [None, numpy.nan] or lvl_temp in [None, numpy.nan]:
+            dump_levels.append(i)
+        ## must have acceptable QC for all measurements
+        if lvl_pres_qc not in args.pressure_qc or lvl_temp_qc not in args.temperature_qc or lvl_psal_qc not in args.salinity_qc:
+            dump_levels.append(i)
+        ## no negative pressures
+        if lvl_pres<0:
+            dump_levels.append(i)
+    levels = [lvl for i, lvl in enumerate(levels) if i not in dump_levels]
+    pres = [lvl[0] for lvl in levels]
+    temp = [lvl[2] for lvl in levels]
+    psal = [lvl[4] for lvl in levels]
+    pres_qc = [lvl[1] for lvl in levels]
+    temp_qc = [lvl[3] for lvl in levels]
+    psal_qc = [lvl[5] for lvl in levels]
 
     # append to dataframe
     julds.append(helpers.datetime_to_datenum(JULD))
@@ -165,4 +176,5 @@ df = pandas.DataFrame({
     'flag': flags
 })
 
+rejects.to_parquet(os.path.join(source_dir, os.path.basename(args.output_file).split('.')[0] + '_rejects.parquet'), engine='pyarrow')
 df.to_parquet(args.output_file, engine='pyarrow')

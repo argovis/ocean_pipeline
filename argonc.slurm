@@ -1,16 +1,15 @@
 #!/bin/bash
-#SBATCH --qos=blanca-giglio
-#SBATCH --account=blanca-giglio
-#SBATCH --partition=blanca-giglio
+#SBATCH --qos=preemptable
 #SBATCH --export=NONE
 #SBATCH --nodes=1
 #SBATCH --ntasks-per-node=1
-#SBATCH --time=72:00:00
+#SBATCH --time=12:00:00
 #SBATCH --job-name=argonc_input
 #SBATCH --output=%x.%j.out
 #SBATCH --mail-type=FAIL
 #SBATCH --mail-user=katie.mills@colorado.edu
 #SBATCH --mem=32GB
+#SBATCH --exclude=bmem-rico1
 
 module purge
 module load anaconda/2023.09
