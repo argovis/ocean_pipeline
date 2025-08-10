@@ -9,7 +9,7 @@
 #SBATCH --mail-type=FAIL
 #SBATCH --mail-user=katie.mills@colorado.edu
 #SBATCH --mem=16GB
-#SBATCH --exclude=bmem-rico1
+#SBATCH --exclude=bnode0508,bnode0509
 
 module purge
 module load anaconda/2023.09
