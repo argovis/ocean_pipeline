@@ -36,6 +36,7 @@ flags = []
 modes = []
 juldqcs = []
 positionqcs = []
+filepaths = []
 
 rejects = pandas.DataFrame(columns=['float', 'cycle', 'longitude', 'latitude', 'position_qc', 'juld_qc', 'startup', 'APEX', 'pressure_sort', 'no_realtime', 'require_delayed', 'region', 'emptyset'])
 
@@ -183,6 +184,7 @@ for fn in glob.glob(os.path.join(source_dir, '*.nc')):
     juldqcs.append(JULD_QC)
     positionqcs.append(POSITION_QC)
     flags.append(0)
+    filepaths.append(fn)
 
 df = pandas.DataFrame({
     'float': floats,
@@ -200,7 +202,8 @@ df = pandas.DataFrame({
     'pressure': pressures,
     'pressure_qc': pressures_qc,
     'filetype': filetypes,
-    'flag': flags
+    'flag': flags,
+    'filepath': filepaths
 })
 
 #rejects.to_parquet(os.path.join(source_dir, os.path.basename(args.output_file).split('.')[0] + '_rejects.parquet'), engine='pyarrow')
