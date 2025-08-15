@@ -1,4 +1,4 @@
-import numpy, argparse, pandas, scipy
+import numpy, argparse, pandas, scipy, tarfile, os
 from helpers import helpers
 
 parser = argparse.ArgumentParser()
@@ -8,6 +8,13 @@ args = parser.parse_args()
 
 df = pandas.read_parquet(args.input_file, engine='pyarrow')
 
+# make archive of original profile files surviving to this point
+filepaths = df.to_dict(orient='list')['filepath']
+with tarfile.open(os.path.splitext(args.output_file)[0] + ".tgz", "w:gz") as tar:
+    for path in filepaths:
+        tar.add(path, arcname=path.split("/")[-1])
+
+# main matlab output file
 dict = {
     'latitude': df.to_dict(orient='list')['latitude'],
     'longitude': df.to_dict(orient='list')['longitude'],
