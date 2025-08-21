@@ -9,10 +9,10 @@ declare data_dir=$1				# where is the relevant upstream data?
 declare year=$2					# year this data corresponds to
 declare month=$3				# month this data corresponds to
 declare runtag=$4                               # unique ID for this run
-declare vartype='integration'                   # 'integration', 'interpolation', or 'none' (if no interpoltions or integrations needed)
-declare variable='conservative_temperature'        # 'absolute_salinity', 'potential_temperature', 'conservative_temperature', 'potential_density', 'mld'
+declare vartype='none'                   # 'integration', 'interpolation', or 'none' (if no interpoltions or integrations needed)
+declare variable='dynamic_height_anom'        # 'absolute_salinity', 'potential_temperature', 'conservative_temperature', 'potential_density', 'mld', 'dynamic_height_anom'
 declare level=10                                # dbar to interpolate to in interpolation mode
-declare region='15,20'                         # integration dbar region, string CSV, in integration mode
+declare region='15,300'                         # integration dbar region, string CSV, in integration mode
 declare pqc='1'                                   # qc to keep for pressure, can be single valued (0) or string CSV ('0,1')
 declare tqc='1'                                   # qc to keep for temeprature
 declare sqc='1'                               # qc to keep for salinity
@@ -45,17 +45,17 @@ fi
 # data prep
 qctag="p${pqc//,/}_t${tqc//,/}_s${sqc//,/}"
 selectionfile=${data_dir}/${runtag}_${year}_${month}_${qctag}_selected_profiles.parquet
-if [[ $upstream == 'wod' ]]; then
-    declare prep_id=$(sbatch --parsable wod.slurm $data_dir $year $month $wod_filetypes $pqc $tqc $sqc $selectionfile)
-elif [[ $upstream == 'argovis' ]]; then
-    declare prep_id=$(sbatch --parsable argovis.slurm $data_dir $year $month $selectionfile $pqc $tqc $sqc)
-elif [[ $upstream == 'argonc' ]]; then
-    declare prep_id=$(sbatch --parsable argonc.slurm $data_dir $year $month $selectionfile $pqc $tqc $sqc)
-fi
+#if [[ $upstream == 'wod' ]]; then
+#    declare prep_id=$(sbatch --parsable wod.slurm $data_dir $year $month $wod_filetypes $pqc $tqc $sqc $selectionfile)
+#elif [[ $upstream == 'argovis' ]]; then
+#    declare prep_id=$(sbatch --parsable argovis.slurm $data_dir $year $month $selectionfile $pqc $tqc $sqc)
+#elif [[ $upstream == 'argonc' ]]; then
+#    declare prep_id=$(sbatch --parsable argonc.slurm $data_dir $year $month $selectionfile $pqc $tqc $sqc)
+#fi
 
 varfile=${data_dir}/${runtag}_${year}_${month}_${qctag}_${variable}.parquet
-declare varcreation=$(sbatch --parsable --dependency=afterok:$prep_id variable_creation.slurm $selectionfile $variable ${varfile})
-#declare varcreation=$(sbatch --parsable variable_creation.slurm $selectionfile $variable ${varfile})
+#declare varcreation=$(sbatch --parsable --dependency=afterok:$prep_id variable_creation.slurm $selectionfile $variable ${varfile} ${region})
+declare varcreation=$(sbatch --parsable variable_creation.slurm $selectionfile $variable ${varfile} ${region})
 
 if [[ $vartype == 'interpolation' ]]; then
     interpfile=${data_dir}/${runtag}_${year}_${month}_${qctag}_${variable}_interpolated_${level}.parquet
