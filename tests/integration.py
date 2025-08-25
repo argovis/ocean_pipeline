@@ -56,7 +56,7 @@ def test_argovis_pipeline():
         longitude = df["longitude"].iloc[0]
         latitude = df["latitude"].iloc[0]
         absolute_salinity = gsw.conversions.SA_from_SP(salinity, pressure, longitude, latitude)
-        potential_temperature = gsw.conversions.pt0_from_t(absolute_salinity, temperature, pressure) + 273.15
+        potential_temperature = gsw.conversions.pt0_from_t(absolute_salinity, temperature, pressure)
         assert numpy.allclose(df["potential_temperature"].iloc[0][index], potential_temperature)
         assert numpy.allclose(df["absolute_salinity"].iloc[0][index], absolute_salinity)
 
