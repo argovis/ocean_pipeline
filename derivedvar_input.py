@@ -113,7 +113,7 @@ for fn in glob.glob(os.path.join(source_dir, '*.nc')):
     if JULD < datetime.datetime(2020,1,1) and DATA_MODE != 'D':
         require_delayed = True
     ## region filter
-    if LATITUDE < -78 or LATITUDE > -60 or LONGITUDE%360 < 290 or LONGITUDE > 340 or numpy.isnan(LONGITUDE) or numpy.isnan(LATITUDE) or LONGITUDE is None or LATITUDE is None:
+    if LATITUDE < -78 or LATITUDE > -60 or LONGITUDE%360 < 298 or LONGITUDE%360 > 348 or numpy.isnan(LONGITUDE) or numpy.isnan(LATITUDE) or LONGITUDE is None or LATITUDE is None:
         region = True
     ## empty profile
     if len(pres) == 0 or len(temp) == 0 or len(psal) == 0:

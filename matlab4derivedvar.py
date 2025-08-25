@@ -25,13 +25,13 @@ dict = {
     'cycle': df.to_dict(orient='list')['cycle'],
     'data_mode': df.to_dict(orient='list')['datamode'],
     'longitude': df.to_dict(orient='list')['longitude'],
-    'pressure': [float(x[0]) for x in df.to_dict(orient='list')['pressure']],
-    'temperature': [float(x[0]) for x in df.to_dict(orient='list')['temperature']],
-    'salinity': [float(x[0]) for x in df.to_dict(orient='list')['salinity']],
-    'potential_density': [float(x[0]) for x in df.to_dict(orient='list')['potential_density']],
-    'potential_temperature': [float(x[0]) for x in df.to_dict(orient='list')['potential_temperature']],
-    'absolute_salinity': [float(x[0]) for x in df.to_dict(orient='list')['absolute_salinity']],
-    'conservative_temperature': [float(x[0]) for x in df.to_dict(orient='list')['conservative_temperature']],
+    'pressure': df.to_dict(orient='list')['pressure'],
+    'temperature': df.to_dict(orient='list')['temperature'],
+    'salinity': df.to_dict(orient='list')['salinity'],
+    'potential_density': df.to_dict(orient='list')['potential_density'],
+    'potential_temperature': df.to_dict(orient='list')['potential_temperature'],
+    'absolute_salinity': df.to_dict(orient='list')['absolute_salinity'],
+    'conservative_temperature': df.to_dict(orient='list')['conservative_temperature'],
 }
 
 scipy.io.savemat(args.output_file, dict)
