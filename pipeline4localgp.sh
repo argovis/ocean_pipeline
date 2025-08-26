@@ -10,9 +10,9 @@ declare year=$2					# year this data corresponds to
 declare month=$3				# month this data corresponds to
 declare runtag=$4                               # unique ID for this run
 declare vartype='none'                   # 'integration', 'interpolation', or 'none' (if no interpoltions or integrations needed)
-declare variable='mld'        # 'absolute_salinity', 'potential_temperature', 'conservative_temperature', 'potential_density', 'mld'
+declare variable='dynamic_height_anom'        # 'absolute_salinity', 'potential_temperature', 'conservative_temperature', 'potential_density', 'mld', 'dynamic_height_anom'
 declare level=10                                # dbar to interpolate to in interpolation mode
-declare region='15,20'                         # integration dbar region, string CSV, in integration mode
+declare region='15,300'                         # integration dbar region, string CSV, in integration mode
 declare pqc='1'                                   # qc to keep for pressure, can be single valued (0) or string CSV ('0,1')
 declare tqc='1'                                   # qc to keep for temeprature
 declare sqc='1'                               # qc to keep for salinity
@@ -54,8 +54,8 @@ elif [[ $upstream == 'argonc' ]]; then
 fi
 
 varfile=${data_dir}/${runtag}_${year}_${month}_${qctag}_${variable}.parquet
-declare varcreation=$(sbatch --parsable --dependency=afterok:$prep_id variable_creation.slurm $selectionfile $variable ${varfile})
-#declare varcreation=$(sbatch --parsable variable_creation.slurm $selectionfile $variable ${varfile})
+declare varcreation=$(sbatch --parsable --dependency=afterok:$prep_id variable_creation.slurm $selectionfile $variable ${varfile} ${region})
+#declare varcreation=$(sbatch --parsable variable_creation.slurm $selectionfile $variable ${varfile} ${region})
 
 if [[ $vartype == 'interpolation' ]]; then
     interpfile=${data_dir}/${runtag}_${year}_${month}_${qctag}_${variable}_interpolated_${level}.parquet

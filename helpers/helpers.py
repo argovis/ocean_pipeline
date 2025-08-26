@@ -1,4 +1,4 @@
-import numpy, datetime, scipy.interpolate, scipy.integrate, math, operator, juliandate, bisect, warnings, xarray
+import numpy, datetime, scipy.interpolate, scipy.integrate, math, operator, juliandate, bisect, warnings, xarray, gsw
 
 def mljul(year, month, day, time):
     # compute something appropriate to interpret as matlab's julian day
@@ -273,6 +273,24 @@ def mld_estimator(row):
 
     # go fishing for the depth that corresponds to the threshold
     return [pchip_search(threshold_density, 0, 1000, 1, row, 'potential_density')]
+
+def dha(row, pressure_range):
+    # calculate the dynamic height anomaly for this profile,
+    # integrated from pressure_range[0] to the reference pressure pressure_range[1]
+    # row must have absolute_salinity, conservative_temperature and pressure all available.
+
+    # create a dense comb for integration
+    # we use our interpolation and not the gsw built-in interpolation as we impose some panics if we aren't satisfied with the in-situ data
+    pressure_comb = integration_comb(pressure_range, spacing=0.2)
+    SA_comb, _ = interpolate_to_levels(row, 'absolute_salinity', pressure_comb)
+    CT_comb, _ = interpolate_to_levels(row, 'conservative_temperature', pressure_comb)
+    dynamic_height_anom = gsw.geostrophy.geo_strf_dyn_height(SA_comb, CT_comb, pressure_comb, p_ref=pressure_range[1])[0] #ie we want the integral from the start of the pressure range, which corresponds to the first pressure in the comb
+    # give me a number or give me None
+    if math.isnan(dynamic_height_anom):
+        print('DHA failed:', row, pressure_range)
+        return [None]
+    else:
+        return [dynamic_height_anom]
 
 
 def pchip_search(target, init_min, init_max, init_step, row, variable):
