@@ -18,24 +18,29 @@ df = pandas.read_parquet(args.input_file, engine='pyarrow')
 # create a dense comb for trapezoidal integration
 pressure_comb = helpers.integration_comb(args.region)
 
+# temperatures should be in kelvin before integration
+variable = args.variable
+if variable in ['temperature', 'conservative_temperature', 'potential_temperature']:
+    df[variable] = df[variable] + 273.15
+
 # interpolate to comb
-df[[args.variable+'_comb', 'flag']] = df.apply(
-    lambda row: pandas.Series(helpers.interpolate_to_levels(row, args.variable, pressure_comb)),
+df[[variable+'_comb', 'flag']] = df.apply(
+    lambda row: pandas.Series(helpers.interpolate_to_levels(row, variable, pressure_comb)),
     axis=1
 )
 
 # integrate over region
-df[args.variable+'_integration'] = df.apply(
-    lambda row: helpers.integration_region(args.region, pressure_comb, row[args.variable+'_comb']),
+df[variable+'_integration'] = df.apply(
+    lambda row: helpers.integration_region(args.region, pressure_comb, row[variable+'_comb']),
     axis=1
 )
 
 # combs can be huge, drop them.
-df = df.drop(columns=[args.variable+'_comb'])
+df = df.drop(columns=[variable+'_comb'])
 
 # dump any rows that failed to integrate
-rejects = df[df[args.variable+'_integration'].apply(lambda x: numpy.isnan(x[0]) )].reset_index(drop=True)
-df = df[~df[args.variable+'_integration'].apply(lambda x: numpy.isnan(x[0]) )].reset_index(drop=True)
+rejects = df[df[variable+'_integration'].apply(lambda x: numpy.isnan(x[0]) )].reset_index(drop=True)
+df = df[~df[variable+'_integration'].apply(lambda x: numpy.isnan(x[0]) )].reset_index(drop=True)
 
 rejects.to_parquet(os.path.join(args.output_file.split('.')[0] + '_rejects.parquet'), engine='pyarrow')
 df.to_parquet(args.output_file, engine='pyarrow')

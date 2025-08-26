@@ -47,4 +47,4 @@ downsampled=${data_dir}/${runtag}_${year}_${month}_${qctag}_derived_vars_downsam
 declare downsample=$(sbatch --parsable --dependency=afterok:$varcreation downsample.slurm $varfile $downsampled)
 matlab=${data_dir}/${runtag}_${year}_${month}_${qctag}_derived_vars.mat
 sbatch --dependency=afterok:$downsample matlab4derivedvar.slurm $downsampled $matlab
-
+#sbatch matlab4derivedvar.slurm $downsampled $matlab

@@ -39,7 +39,6 @@ for var in args.variable:
             ),
             axis=1
         )
-        df['potential_temperature'] = df['potential_temperature'] + 273.15
 
         df['potential_temperature_qc'] = df.apply(
             lambda row: helpers.merge_qc([row['salinity_qc'], row['temperature_qc'], row['pressure_qc']]),
@@ -53,7 +52,6 @@ for var in args.variable:
             ),
             axis=1
         )
-        df['conservative_temperature'] = df['conservative_temperature'] + 273.15
 
         df['conservative_temperature_qc'] = df.apply(
             lambda row: helpers.merge_qc([row['salinity_qc'], row['temperature_qc'], row['pressure_qc']]),
