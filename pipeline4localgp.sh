@@ -45,17 +45,17 @@ fi
 # data prep
 qctag="p${pqc//,/}_t${tqc//,/}_s${sqc//,/}"
 selectionfile=${data_dir}/${runtag}_${year}_${month}_${qctag}_selected_profiles.parquet
-#if [[ $upstream == 'wod' ]]; then
-#    declare prep_id=$(sbatch --parsable wod.slurm $data_dir $year $month $wod_filetypes $pqc $tqc $sqc $selectionfile)
-#elif [[ $upstream == 'argovis' ]]; then
-#    declare prep_id=$(sbatch --parsable argovis.slurm $data_dir $year $month $selectionfile $pqc $tqc $sqc)
-#elif [[ $upstream == 'argonc' ]]; then
-#    declare prep_id=$(sbatch --parsable argonc.slurm $data_dir $year $month $selectionfile $pqc $tqc $sqc)
-#fi
+if [[ $upstream == 'wod' ]]; then
+    declare prep_id=$(sbatch --parsable wod.slurm $data_dir $year $month $wod_filetypes $pqc $tqc $sqc $selectionfile)
+elif [[ $upstream == 'argovis' ]]; then
+    declare prep_id=$(sbatch --parsable argovis.slurm $data_dir $year $month $selectionfile $pqc $tqc $sqc)
+elif [[ $upstream == 'argonc' ]]; then
+    declare prep_id=$(sbatch --parsable argonc.slurm $data_dir $year $month $selectionfile $pqc $tqc $sqc)
+fi
 
 varfile=${data_dir}/${runtag}_${year}_${month}_${qctag}_${variable}.parquet
-#declare varcreation=$(sbatch --parsable --dependency=afterok:$prep_id variable_creation.slurm $selectionfile $variable ${varfile} ${region})
-declare varcreation=$(sbatch --parsable variable_creation.slurm $selectionfile $variable ${varfile} ${region})
+declare varcreation=$(sbatch --parsable --dependency=afterok:$prep_id variable_creation.slurm $selectionfile $variable ${varfile} ${region})
+#declare varcreation=$(sbatch --parsable variable_creation.slurm $selectionfile $variable ${varfile} ${region})
 
 if [[ $vartype == 'interpolation' ]]; then
     interpfile=${data_dir}/${runtag}_${year}_${month}_${qctag}_${variable}_interpolated_${level}.parquet
