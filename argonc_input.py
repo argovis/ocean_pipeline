@@ -101,8 +101,8 @@ for fn in glob.glob(os.path.join(source_dir, '*.nc')):
     if any(x[0] - x[1] > 2.4 for x in zip(pres, pres[1:])):
         pressure_sort = True
     ## no realtime variables ever
-    if DATA_MODE == 'R':
-        no_realtime = True
+    #if DATA_MODE == 'R':
+    #    no_realtime = True
     ## delayed mode only 5+ years in the past
     if JULD < datetime.datetime(2020,1,1) and DATA_MODE != 'D':
         require_delayed = True
