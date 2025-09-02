@@ -19,35 +19,39 @@ args = parser.parse_args()
 df = pandas.read_parquet(args.input_file, engine='pyarrow')
 
 # data may or may not have float, cycle, or uncertainty
-obsid = [0]*len(df.to_dict(orient='list')['longitude'])
+obsid = [0]*len(df['longitude'].tolist())
 try:
-    obsid = df.to_dict(orient='list')['cycle']
-except:
-    pass
-floatid = [0]*len(df.to_dict(orient='list')['longitude'])
-try:
-    floatid = df.to_dict(orient='list')['float']
-except:
-    pass
-uncertainty = [0]*len(df.to_dict(orient='list')['longitude'])
-try:
-    uncertainty = df.to_dict(orient='list')['uncertainty']
+    obsid = df['cycle'].tolist()
 except:
     pass
 
+floatid = [0]*len(df['longitude'].tolist())
+try:
+    floatid = df['float'].tolist()
+except:
+    pass
+uncertainty = [0]*len(df['longitude'].tolist())
+try:
+    uncertainty = df['uncertainty'].tolist()
+except:
+    pass
+
+# localGP requires longitude be on [20,380)
+df["longitude_20_380"] = ((df["longitude"] - 20) % 360) + 20
+
 dict = {
-    'profVariableAggrMonth': [float(x[0]) for x in df.to_dict(orient='list')[args.variable]],
-    'profLatAggrMonth': df.to_dict(orient='list')['latitude'],
-    'profLongAggrMonth': df.to_dict(orient='list')['longitude'],
+    'profVariableAggrMonth': [float(x[0]) for x in df[args.variable].tolist()],
+    'profLatAggrMonth': df['latitude'].tolist(),
+    'profLongAggrMonth': df["longitude_20_380"].tolist(),
     'profFloatIDAggrMonth': floatid,
     'profObsIDAggrMonth': obsid,
-    'profJulDayAggrMonth': df.to_dict(orient='list')['juld'],
+    'profJulDayAggrMonth': df['juld'].tolist(),
     'profUncertaintyAggrMonth': uncertainty,
 }
 
 for field in args.auxfields:
     try:
-        dict[field] = df.to_dict(orient='list')[field]
+        dict[field] = df[field].tolist()
     except:
         print(f'no such field: {field}')
 

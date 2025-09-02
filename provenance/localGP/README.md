@@ -45,3 +45,47 @@ Allows realtime data like OP20250808* while managing temperature units like OP20
  - localGP
    - tag: https://github.com/argovis/localGP/releases/tag/OP20250808
  - data origin: https://www.seanoe.org/data/00311/42182/#116315
+
+## OP20250826* series
+
+Allows realtime data, adds dynamic sea level anomaly
+
+ - python env: https://github.com/argovis/ocean_pipeline/blob/main/provenance/environments/python-dev-env.txt
+ - ocean-pipeline
+   - tag: https://github.com/argovis/ocean_pipeline/releases/tag/OP20250826
+ - localGP
+   - tag: https://github.com/argovis/localGP/releases/tag/OP20250808
+ - data origin: https://www.seanoe.org/data/00311/42182/#116315
+
+## OP20250826b* series
+
+Rejects realtime data, adds dynamic sea level anomaly
+
+ - python env: https://github.com/argovis/ocean_pipeline/blob/main/provenance/environments/python-dev-env.txt
+ - ocean-pipeline
+   - tag: https://github.com/argovis/ocean_pipeline/releases/tag/OP20250826b
+ - localGP
+   - tag: https://github.com/argovis/localGP/releases/tag/OP20250808
+ - data origin: https://www.seanoe.org/data/00311/42182/#116315
+
+## OP20250829* series
+
+Rejects realtime data, maps localGP input longitudes onto [20,380)
+
+ - python env: https://github.com/argovis/ocean_pipeline/blob/main/provenance/environments/python-dev-env.txt
+ - ocean-pipeline
+   - tag: https://github.com/argovis/ocean_pipeline/releases/tag/OP20250829
+ - localGP
+   - tag: https://github.com/argovis/localGP/releases/tag/OP20250808
+ - data origin: https://www.seanoe.org/data/00311/42182/#116315
+
+## OP20250829b* series
+
+Accepts realtime data, maps localGP input longitudes onto [20,380)
+
+ - python env: https://github.com/argovis/ocean_pipeline/blob/main/provenance/environments/python-dev-env.txt
+ - ocean-pipeline
+   - tag: https://github.com/argovis/ocean_pipeline/releases/tag/OP20250829b 
+ - localGP
+   - tag: https://github.com/argovis/localGP/releases/tag/OP20250808
+ - data origin: https://www.seanoe.org/data/00311/42182/#116315
