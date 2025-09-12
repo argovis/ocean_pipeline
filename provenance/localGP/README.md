@@ -89,3 +89,14 @@ Accepts realtime data, maps localGP input longitudes onto [20,380)
  - localGP
    - tag: https://github.com/argovis/localGP/releases/tag/OP20250808
  - data origin: https://www.seanoe.org/data/00311/42182/#116315
+
+## OP20250912* series
+
+Rejects realtime data, updates JULD QC to allow 1,8
+
+ - python env: https://github.com/argovis/ocean_pipeline/blob/main/provenance/environments/python-dev-env.txt
+ - ocean-pipeline
+   - tag: https://github.com/argovis/ocean_pipeline/releases/tag/OP20250912
+ - localGP
+   - tag: https://github.com/argovis/localGP/releases/tag/OP20250808
+ - data origin: https://www.seanoe.org/data/00311/42182/#116315

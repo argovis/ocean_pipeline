@@ -34,7 +34,7 @@ floats = []
 cycles = []
 flags = []
 
-rejects = pandas.DataFrame(columns=['float', 'cycle', 'longitude', 'latitude', 'position_qc', 'juld_qc', 'startup', 'APEX', 'pressure_sort', 'no_realtime', 'require_delayed'])
+rejects = pandas.DataFrame(columns=['float', 'cycle', 'longitude', 'latitude', 'position_qc', 'juld_qc', 'startup', 'APEX', 'pressure_sort', 'no_realtime', 'require_delayed', 'POSITION_QC_FLAG', 'JULD_QC_FLAG', 'JULD'])
 
 for fn in glob.glob(os.path.join(source_dir, '*.nc')):
     print(fn)
@@ -86,10 +86,10 @@ for fn in glob.glob(os.path.join(source_dir, '*.nc')):
     no_realtime = False
     require_delayed = False
     ## QC 1 position
-    if POSITION_QC != 1:
+    if POSITION_QC not in [1]:
         position_qc = True
     ## QC 1 time
-    if JULD_QC != 1:
+    if JULD_QC not in [1,8]:
         juld_qc = True
     ## no startup cycles
     if CYCLE_NUMBER == 0:
@@ -101,8 +101,8 @@ for fn in glob.glob(os.path.join(source_dir, '*.nc')):
     if any(x[0] - x[1] > 2.4 for x in zip(pres, pres[1:])):
         pressure_sort = True
     ## no realtime variables ever
-    #if DATA_MODE == 'R':
-    #    no_realtime = True
+    if DATA_MODE == 'R':
+        no_realtime = True
     ## delayed mode only 5+ years in the past
     if JULD < datetime.datetime(2020,1,1) and DATA_MODE != 'D':
         require_delayed = True
@@ -114,6 +114,9 @@ for fn in glob.glob(os.path.join(source_dir, '*.nc')):
             'longitude': LONGITUDE,
             'latitude': LATITUDE,
             'position_qc': position_qc,
+            'POSITION_QC_FLAG': POSITION_QC,
+            'JULD_QC_FLAG': JULD_QC,
+            'JULD': JULD,
             'juld_qc': juld_qc,
             'startup': startup,
             'APEX': apex,

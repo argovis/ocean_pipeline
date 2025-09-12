@@ -42,7 +42,7 @@ qctag="p${pqc//,/}_t${tqc//,/}_s${sqc//,/}"
 selectionfile=${data_dir}/${runtag}_${year}_${month}_${qctag}_selected_profiles.parquet
 declare prep_id=$(sbatch --parsable derivedvar.slurm $data_dir $year $month $selectionfile $pqc $tqc $sqc)
 varfile=${data_dir}/${runtag}_${year}_${month}_${qctag}_derived_vars.parquet
-declare varcreation=$(sbatch --parsable --dependency=afterok:$prep_id variable_creation.slurm $selectionfile $variable ${varfile})
+declare varcreation=$(sbatch --parsable --dependency=afterok:$prep_id variable_creation.slurm $selectionfile $variable ${varfile} '0,0')
 downsampled=${data_dir}/${runtag}_${year}_${month}_${qctag}_derived_vars_downsampled.parquet
 declare downsample=$(sbatch --parsable --dependency=afterok:$varcreation downsample.slurm $varfile $downsampled)
 matlab=${data_dir}/${runtag}_${year}_${month}_${qctag}_derived_vars.mat
