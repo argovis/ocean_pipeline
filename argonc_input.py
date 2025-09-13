@@ -34,7 +34,7 @@ floats = []
 cycles = []
 flags = []
 
-rejects = pandas.DataFrame(columns=['float', 'cycle', 'longitude', 'latitude', 'position_qc', 'juld_qc', 'startup', 'APEX', 'pressure_sort', 'no_realtime', 'require_delayed'])
+rejects = pandas.DataFrame(columns=['float', 'cycle', 'longitude', 'latitude', 'position_qc', 'juld_qc', 'startup', 'APEX', 'pressure_sort', 'no_realtime', 'require_delayed', 'POSITION_QC_FLAG', 'JULD_QC_FLAG', 'JULD'])
 
 for fn in glob.glob(os.path.join(source_dir, '*.nc')):
     print(fn)
@@ -86,10 +86,10 @@ for fn in glob.glob(os.path.join(source_dir, '*.nc')):
     no_realtime = False
     require_delayed = False
     ## QC 1 position
-    if POSITION_QC != 1:
+    if POSITION_QC not in [1]:
         position_qc = True
     ## QC 1 time
-    if JULD_QC != 1:
+    if JULD_QC not in [1,8]:
         juld_qc = True
     ## no startup cycles
     if CYCLE_NUMBER == 0:
@@ -114,6 +114,9 @@ for fn in glob.glob(os.path.join(source_dir, '*.nc')):
             'longitude': LONGITUDE,
             'latitude': LATITUDE,
             'position_qc': position_qc,
+            'POSITION_QC_FLAG': POSITION_QC,
+            'JULD_QC_FLAG': JULD_QC,
+            'JULD': JULD,
             'juld_qc': juld_qc,
             'startup': startup,
             'APEX': apex,
