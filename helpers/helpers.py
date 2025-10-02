@@ -259,7 +259,10 @@ def choose_profile(group):
     return group.iloc[preferred]
 
 def merge_qc(qc_lists):
-    return [max(column) for column in zip(*qc_lists)]
+    if len(qc_lists[0] > 0):
+        return [max(column) for column in zip(*qc_lists)]
+    else:
+        return []
 
 def mld_estimator(row):
     # estimate the mixed layer depth for this profile

@@ -2,15 +2,19 @@ import glob, os, sys, pandas, xarray, argparse, numpy, datetime
 from helpers import helpers
 
 # argument setup
-def parse_list(s):
+def int_list(s):
     return [int(x) for x in s.split(',')]
+
+def float_list(s):
+    return [float(x) for x in s.split(',')]
 
 parser = argparse.ArgumentParser()
 parser.add_argument("--year", type=int, help="Year to consider")
 parser.add_argument("--month", type=int, help="Month to consider")
-parser.add_argument("--temperature_qc", type=parse_list, help="temperature QC flags to accept")
-parser.add_argument("--salinity_qc", type=parse_list, help="salinity QC flags to accept")
-parser.add_argument("--pressure_qc", type=parse_list, help="pressure QC flags to accept")
+parser.add_argument("--bounds", type=float_list, help="geographic boundaries to accept in degrees E and N, arranged S,N,W,E")
+parser.add_argument("--temperature_qc", type=int_list, help="temperature QC flags to accept")
+parser.add_argument("--salinity_qc", type=int_list, help="salinity QC flags to accept")
+parser.add_argument("--pressure_qc", type=int_list, help="pressure QC flags to accept")
 parser.add_argument("--data_dir", type=str, help="directory with Argovis JSON")
 parser.add_argument("--output_file", type=str, help="name of output file, with path.")
 args = parser.parse_args()
@@ -92,11 +96,11 @@ for fn in glob.glob(os.path.join(source_dir, '*.nc')):
     region = False
     emptyset = False
     ## QC 1 position
-    #if POSITION_QC != 1:
-    #    position_qc = True
+    if POSITION_QC not in [1,8]:
+        position_qc = True
     ## QC 1 time
-    #if JULD_QC != 1:
-    #    juld_qc = True
+    if JULD_QC not in [1,8]:
+        juld_qc = True
     ## no startup cycles
     if CYCLE_NUMBER == 0:
         startup = True
@@ -107,13 +111,13 @@ for fn in glob.glob(os.path.join(source_dir, '*.nc')):
     if any(x[0] - x[1] > 2.4 for x in zip(pres, pres[1:])):
         pressure_sort = True
     ## no realtime variables ever
-    #if DATA_MODE == 'R':
-    #    no_realtime = True
+    if DATA_MODE == 'R':
+        no_realtime = True
     ## delayed mode only 5+ years in the past
     if JULD < datetime.datetime(2020,1,1) and DATA_MODE != 'D':
         require_delayed = True
     ## region filter
-    if LATITUDE < -78 or LATITUDE > -60 or LONGITUDE%360 < 298 or LONGITUDE%360 > 348 or numpy.isnan(LONGITUDE) or numpy.isnan(LATITUDE) or LONGITUDE is None or LATITUDE is None:
+    if LATITUDE < args.bounds[0] or LATITUDE > args.bounds[1] or LONGITUDE%360 < args.bounds[2] or LONGITUDE%360 > args.bounds[3] or numpy.isnan(LONGITUDE) or numpy.isnan(LATITUDE) or LONGITUDE is None or LATITUDE is None:
         region = True
     ## empty profile
     if len(pres) == 0 or len(temp) == 0 or len(psal) == 0:

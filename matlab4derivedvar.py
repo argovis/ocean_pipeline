@@ -8,30 +8,52 @@ args = parser.parse_args()
 
 df = pandas.read_parquet(args.input_file, engine='pyarrow')
 
-# make archive of original profile files surviving to this point
-filepaths = df.to_dict(orient='list')['filepath']
-with tarfile.open(os.path.splitext(args.output_file)[0] + ".tgz", "w:gz") as tar:
-    for path in filepaths:
-        tar.add(path, arcname=path.split("/")[-1])
+if len(df) > 0:
+    # make archive of original profile files surviving to this point
+    filepaths = df.to_dict(orient='list')['filepath']
+    with tarfile.open(os.path.splitext(args.output_file)[0] + ".tgz", "w:gz") as tar:
+        for path in filepaths:
+            tar.add(path, arcname=path.split("/")[-1])
 
-# main matlab output file
-dict = {
-    'latitude': df.to_dict(orient='list')['latitude'],
-    'longitude': df.to_dict(orient='list')['longitude'],
-    'juld': df.to_dict(orient='list')['juld'],
-    'position_qc': df.to_dict(orient='list')['positionqc'],
-    'juld_qc': df.to_dict(orient='list')['juldqc'],
-    'float': df.to_dict(orient='list')['float'],
-    'cycle': df.to_dict(orient='list')['cycle'],
-    'data_mode': df.to_dict(orient='list')['datamode'],
-    'longitude': df.to_dict(orient='list')['longitude'],
-    'pressure': df.to_dict(orient='list')['pressure'],
-    'temperature': df.to_dict(orient='list')['temperature'],
-    'salinity': df.to_dict(orient='list')['salinity'],
-    'potential_density': df.to_dict(orient='list')['potential_density'],
-    'potential_temperature': df.to_dict(orient='list')['potential_temperature'],
-    'absolute_salinity': df.to_dict(orient='list')['absolute_salinity'],
-    'conservative_temperature': df.to_dict(orient='list')['conservative_temperature'],
-}
+    # main matlab output file
+    dict = {
+        'latitude': df.to_dict(orient='list')['latitude'],
+        'longitude': df.to_dict(orient='list')['longitude'],
+        'juld': df.to_dict(orient='list')['juld'],
+        'position_qc': df.to_dict(orient='list')['positionqc'],
+        'juld_qc': df.to_dict(orient='list')['juldqc'],
+        'float': df.to_dict(orient='list')['float'],
+        'cycle': df.to_dict(orient='list')['cycle'],
+        'data_mode': df.to_dict(orient='list')['datamode'],
+        'longitude': df.to_dict(orient='list')['longitude'],
+        'pressure': df.to_dict(orient='list')['pressure'],
+        'temperature': df.to_dict(orient='list')['temperature'],
+        'salinity': df.to_dict(orient='list')['salinity'],
+        'potential_density': df.to_dict(orient='list')['potential_density'],
+        'potential_temperature': df.to_dict(orient='list')['potential_temperature'],
+        'absolute_salinity': df.to_dict(orient='list')['absolute_salinity'],
+        'conservative_temperature': df.to_dict(orient='list')['conservative_temperature'],
+    }
 
-scipy.io.savemat(args.output_file, dict)
+    scipy.io.savemat(args.output_file, dict)
+else:
+    # dummy for pipeline consistency
+    dict = {
+        'latitude': [],
+        'longitude': [],
+        'juld': [],
+        'position_qc': [],
+        'juld_qc': [],
+        'float': [],
+        'cycle': [],
+        'data_mode': [],
+        'longitude': [],
+        'pressure': [],
+        'temperature': [],
+        'salinity': [],
+        'potential_density': [],
+        'potential_temperature': [],
+        'absolute_salinity': [],
+        'conservative_temperature': [],
+    }
+    scipy.io.savemat(args.output_file, dict)

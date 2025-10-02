@@ -16,87 +16,87 @@ parser.add_argument("--pressure_range", type=float_list, help="[min, max] pressu
 args = parser.parse_args()
 
 df = pandas.read_parquet(args.input_file, engine='pyarrow')
+if len(df) > 0:
+    for var in args.variable:
 
-for var in args.variable:
+        if var in ['absolute_salinity', 'potential_temperature', 'conservative_temperature', 'potential_density', 'mld', 'dynamic_height_anom'] and 'absolute_salinity' not in df.columns:
+            df['absolute_salinity'] = df.apply(
+                lambda row: gsw.conversions.SA_from_SP(
+                    row['salinity'], row['pressure'], row['longitude'], row['latitude']
+                ),
+                axis=1
+            )
 
-    if var in ['absolute_salinity', 'potential_temperature', 'conservative_temperature', 'potential_density', 'mld', 'dynamic_height_anom'] and 'absolute_salinity' not in df.columns:
-        df['absolute_salinity'] = df.apply(
-            lambda row: gsw.conversions.SA_from_SP(
-                row['salinity'], row['pressure'], row['longitude'], row['latitude']
-            ),
-            axis=1
-        )
+            df['absolute_salinity_qc'] = df.apply(
+                lambda row: helpers.merge_qc([row['salinity_qc'], row['pressure_qc']]),
+                axis=1
+            )
 
-        df['absolute_salinity_qc'] = df.apply(
-            lambda row: helpers.merge_qc([row['salinity_qc'], row['pressure_qc']]),
-            axis=1
-        )
+        if var == 'potential_temperature' and 'potential_temperature' not in df.columns:
+            df['potential_temperature'] = df.apply(
+                lambda row: gsw.conversions.pt0_from_t(
+                    row['absolute_salinity'], row['temperature'], row['pressure']
+                ),
+                axis=1
+            )
 
-    if var == 'potential_temperature' and 'potential_temperature' not in df.columns:
-        df['potential_temperature'] = df.apply(
-            lambda row: gsw.conversions.pt0_from_t(
-                row['absolute_salinity'], row['temperature'], row['pressure']
-            ),
-            axis=1
-        )
+            df['potential_temperature_qc'] = df.apply(
+                lambda row: helpers.merge_qc([row['salinity_qc'], row['temperature_qc'], row['pressure_qc']]),
+                axis=1
+            )
 
-        df['potential_temperature_qc'] = df.apply(
-            lambda row: helpers.merge_qc([row['salinity_qc'], row['temperature_qc'], row['pressure_qc']]),
-            axis=1
-        )
+        if var in ['conservative_temperature', 'potential_density', 'mld', 'dynamic_height_anom'] and 'conservative_temperature' not in df.columns:
+            df['conservative_temperature'] = df.apply(
+                lambda row: gsw.conversions.CT_from_t(
+                    row['absolute_salinity'], row['temperature'], row['pressure']
+                ),
+                axis=1
+            )
 
-    if var in ['conservative_temperature', 'potential_density', 'mld', 'dynamic_height_anom'] and 'conservative_temperature' not in df.columns:
-        df['conservative_temperature'] = df.apply(
-            lambda row: gsw.conversions.CT_from_t(
-                row['absolute_salinity'], row['temperature'], row['pressure']
-            ),
-            axis=1
-        )
+            df['conservative_temperature_qc'] = df.apply(
+                lambda row: helpers.merge_qc([row['salinity_qc'], row['temperature_qc'], row['pressure_qc']]),
+                axis=1
+            )
 
-        df['conservative_temperature_qc'] = df.apply(
-            lambda row: helpers.merge_qc([row['salinity_qc'], row['temperature_qc'], row['pressure_qc']]),
-            axis=1
-        )
+        if var in ['potential_density', 'mld'] and 'potential_density' not in df.columns:
+            df['potential_density'] = df.apply(
+                lambda row: gsw.sigma0(
+                    row['absolute_salinity'], row['conservative_temperature']
+                ),
+                axis=1
+            )
 
-    if var in ['potential_density', 'mld'] and 'potential_density' not in df.columns:
-        df['potential_density'] = df.apply(
-            lambda row: gsw.sigma0(
-                row['absolute_salinity'], row['conservative_temperature']
-            ),
-            axis=1
-        )
+            df['potential_density_qc'] = df.apply(
+                lambda row: helpers.merge_qc([row['salinity_qc'], row['temperature_qc'], row['pressure_qc']]),
+                axis=1
+            )
 
-        df['potential_density_qc'] = df.apply(
-            lambda row: helpers.merge_qc([row['salinity_qc'], row['temperature_qc'], row['pressure_qc']]),
-            axis=1
-        )
+        if var == 'mld' and 'mld' not in df.columns:
+            df['mld'] = df.apply(
+                lambda row: helpers.mld_estimator(row),
+	        axis=1
+            )
 
-    if var == 'mld' and 'mld' not in df.columns:
-        df['mld'] = df.apply(
-            lambda row: helpers.mld_estimator(row),
-	    axis=1
-        )
+            # abandon profiles for which we could not calculate a mld
+            df = df[df['mld'].apply(lambda x: x != [None])].reset_index(drop=True)
 
-        # abandon profiles for which we could not calculate a mld
-        df = df[df['mld'].apply(lambda x: x != [None])].reset_index(drop=True)
+            df['mld_qc'] = df.apply(
+                lambda row: helpers.merge_qc([row['salinity_qc'], row['temperature_qc'], row['pressure_qc']]),
+                axis=1
+            )
 
-        df['mld_qc'] = df.apply(
-            lambda row: helpers.merge_qc([row['salinity_qc'], row['temperature_qc'], row['pressure_qc']]),
-            axis=1
-        )
+        if var == 'dynamic_height_anom' and 'dynamic_height_anom' not in df.columns:
+            df['dynamic_height_anom'] = df.apply(
+                lambda row: helpers.dha(row, args.pressure_range),
+                axis=1
+            )
 
-    if var == 'dynamic_height_anom' and 'dynamic_height_anom' not in df.columns:
-        df['dynamic_height_anom'] = df.apply(
-            lambda row: helpers.dha(row, args.pressure_range),
-            axis=1
-        )
+            # abandon profiles for which we could not calculate a mld
+            df = df[df['dynamic_height_anom'].apply(lambda x: x != [None])].reset_index(drop=True)
 
-        # abandon profiles for which we could not calculate a mld
-        df = df[df['dynamic_height_anom'].apply(lambda x: x != [None])].reset_index(drop=True)
-
-        df['dynamic_height_anom_qc'] = df.apply(
-            lambda row: helpers.merge_qc([row['salinity_qc'], row['temperature_qc'], row['pressure_qc']]),
-            axis=1
-        )
+            df['dynamic_height_anom_qc'] = df.apply(
+                lambda row: helpers.merge_qc([row['salinity_qc'], row['temperature_qc'], row['pressure_qc']]),
+                axis=1
+            )
 
 df.to_parquet(args.output_file, engine='pyarrow')

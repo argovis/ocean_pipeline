@@ -11,7 +11,8 @@ declare runtag=$4                               # unique ID for this run
 declare variable='potential_density,potential_temperature,absolute_salinity,conservative_temperature'        # 'absolute_salinity', 'potential_temperature', 'conservative_temperature', 'potential_density', 'mld'
 declare pqc=1                                   # qc to keep for pressure, can be single valued (0) or string CSV ('0,1')
 declare tqc=1                                   # qc to keep for temeprature
-declare sqc=1                               # qc to keep for salinity
+declare sqc=1                                   # qc to keep for salinity
+declare bounds="-78,-60,298,348"		# geographic bounds in degrees north on [-90,90] and degrees east on [0,360], arranged S,N,W,E
 
 # don't touch below this line -------------------------------------------------------------------
 
@@ -39,12 +40,14 @@ fi
 
 # data prep
 qctag="p${pqc//,/}_t${tqc//,/}_s${sqc//,/}"
-selectionfile=${data_dir}/${runtag}_${year}_${month}_${qctag}_selected_profiles.parquet
-declare prep_id=$(sbatch --parsable derivedvar.slurm $data_dir $year $month $selectionfile $pqc $tqc $sqc)
-varfile=${data_dir}/${runtag}_${year}_${month}_${qctag}_derived_vars.parquet
+IFS=',' read -r south north west east <<< "$bounds"
+geotag="S${south}_N${north}_W${west}_E${east}"
+selectionfile=${data_dir}/${runtag}_${year}_${month}_${qctag}_${geotag}_selected_profiles.parquet
+declare prep_id=$(sbatch --parsable derivedvar.slurm $data_dir $year $month $selectionfile $pqc $tqc $sqc $bounds)
+varfile=${data_dir}/${runtag}_${year}_${month}_${qctag}_${geotag}_derived_vars.parquet
 declare varcreation=$(sbatch --parsable --dependency=afterok:$prep_id variable_creation.slurm $selectionfile $variable ${varfile} '0,0')
-downsampled=${data_dir}/${runtag}_${year}_${month}_${qctag}_derived_vars_downsampled.parquet
+downsampled=${data_dir}/${runtag}_${year}_${month}_${qctag}_${geotag}_derived_vars_downsampled.parquet
 declare downsample=$(sbatch --parsable --dependency=afterok:$varcreation downsample.slurm $varfile $downsampled)
-matlab=${data_dir}/${runtag}_${year}_${month}_${qctag}_derived_vars.mat
+matlab=${data_dir}/${runtag}_${year}_${month}_${qctag}_${geotag}_derived_vars.mat
 sbatch --dependency=afterok:$downsample matlab4derivedvar.slurm $downsampled $matlab
 #sbatch matlab4derivedvar.slurm $downsampled $matlab
