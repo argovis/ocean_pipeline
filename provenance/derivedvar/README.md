@@ -10,3 +10,12 @@ Primarily for a Weddell sea study.
  - ocean-pipeline
    - tag: https://github.com/argovis/ocean_pipeline/releases/tag/OP20250929
  - data origin: https://www.seanoe.org/data/00311/42182/#116315
+
+## OP20251017* series
+
+Primarily for a Weddell sea study; corrects downsampling algorithm.
+
+ - python env: https://github.com/argovis/ocean_pipeline/blob/main/provenance/environments/python-dev-env.txt
+ - ocean-pipeline
+   - tag: https://github.com/argovis/ocean_pipeline/releases/tag/OP20251017
+ - data origin: https://www.seanoe.org/data/00311/42182/#116315

@@ -245,15 +245,19 @@ def choose_profile(group):
     # allow a slightly lower res profile if it goes deeper
 
     df = group.copy()
-    shallowest = df['pressure'].apply(lambda lst: lst[-1]).min()
+    shallowest = df['pressure'].apply(lambda lst: lst[-1]).min() # ie shallowest bottom of all the profiles in the group
     df['resolution'] = df['pressure'].apply(lambda lst: len(lst[:bisect.bisect_right(lst, shallowest)])/shallowest)
 
-    preferred = 0
+    # find best resolution
+    highest_res_idx = 0
     for i in range(len(group)):
-        if (
-            df.iloc[i]['resolution'] >= 1.15*df.iloc[preferred]['resolution'] # insurmountably higher resolution, depth is irrelevant
-            or df.iloc[i]['resolution'] > df.iloc[preferred]['resolution'] and df.iloc[i]['pressure'][-1] >= df.iloc[preferred]['pressure'][-1] # slightly higher resolution and deeper
-        ):
+        if df.iloc[i]['resolution'] > df.iloc[highest_res_idx]['resolution']:
+            highest_res_idx = i
+
+    # see if any profiles are almost as high res but go deeper
+    preferred = highest_res_idx
+    for i in range(len(group)):
+        if df.iloc[i]['resolution']*1.15 >= df.iloc[highest_res_idx]['resolution'] and df.iloc[i]['pressure'][-1] >= df.iloc[preferred]['pressure'][-1]:
             preferred = i
 
     return group.iloc[preferred]
