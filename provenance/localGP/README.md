@@ -111,3 +111,25 @@ Accepts realtime data, updates JULD QC to allow 1,8
  - localGP
    - tag: https://github.com/argovis/localGP/releases/tag/OP20250808
  - data origin: https://www.seanoe.org/data/00311/42182/#116315
+
+## OP20251125 series
+
+Accepts realtime data, includes downsampling correction made for the derivedvar project, includes operational updates to localGP
+
+ - python env: https://github.com/argovis/ocean_pipeline/blob/main/provenance/environments/python-dev-env.txt
+ - ocean-pipeline
+   - tag: https://github.com/argovis/ocean_pipeline/releases/tag/OP20251017
+ - localGP
+   - tag: https://github.com/argovis/localGP/releases/tag/OP20251125
+ - data origin: https://www.seanoe.org/data/00311/42182/#116315
+
+## OP20251126 series
+
+Minor opertional corrections versus OP20251125.
+
+ - python env: https://github.com/argovis/ocean_pipeline/blob/main/provenance/environments/python-dev-env.txt
+ - ocean-pipeline
+   - tag: https://github.com/argovis/ocean_pipeline/releases/tag/OP20251126
+ - localGP
+   - tag: https://github.com/argovis/localGP/releases/tag/OP20251126
+ - data origin: https://www.seanoe.org/data/00311/42182/#116315

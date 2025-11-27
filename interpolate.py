@@ -21,6 +21,6 @@ df[[args.variable+'_interpolation', 'flag']] = df.apply(
     axis=1
 )
 # dump any rows that failed to interpolate
-df = df[~df[args.variable].apply(lambda x: numpy.isnan(x[0]) )].reset_index(drop=True)
+df = df[~df[args.variable+'_interpolation'].apply(lambda x: numpy.isnan(x[0]) )].reset_index(drop=True)
 
 df.to_parquet(args.output_file, engine='pyarrow')
