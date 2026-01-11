@@ -1,4 +1,5 @@
-import numpy, argparse, pandas, scipy
+## see helpers/helpers.py for warning flag table
+import numpy, argparse, pandas, scipy, os
 from helpers import helpers
 
 # argument setup
@@ -21,6 +22,9 @@ df[[args.variable+'_interpolation', 'flag']] = df.apply(
     axis=1
 )
 # dump any rows that failed to interpolate
+rejects = df[df[args.variable+'_interpolation'].apply(lambda x: numpy.isnan(x[0]) )].reset_index(drop=True)
+rejects = rejects[['float', 'cycle', 'longitude', 'latitude', 'juld', 'flag']]
 df = df[~df[args.variable+'_interpolation'].apply(lambda x: numpy.isnan(x[0]) )].reset_index(drop=True)
 
+rejects.to_parquet(os.path.join(args.output_file.split('.')[0] + '_rejects.parquet'), engine='pyarrow')
 df.to_parquet(args.output_file, engine='pyarrow')

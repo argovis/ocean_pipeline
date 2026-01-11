@@ -19,4 +19,4 @@ conda activate wod2mat
 
 cd $SLURM_SUBMIT_DIR
 #dac options are: aoml bodc csio incois kma meds coriolis csiro jma kordi nmdis
-python sort_argonc.py /scratch/alpine/wimi7695/argo_doi_2025/202501-ArgoData/dac/aoml /scratch/alpine/wimi7695/argo_doi_2025/sorted
+python sort_argonc.py /scratch/alpine/wimi7695/argo_doi_2026/202601-ArgoData/dac/nmdis /scratch/alpine/wimi7695/argo_doi_2026/sorted_202601

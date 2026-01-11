@@ -1,3 +1,12 @@
+## data selection flags
+# 1: position QC unacceptable
+# 2: timestamp QC unacceptable
+# 4: startup cycle
+# 8: bad apex float
+# 16: pressure out of order
+# 32: no realtime data allowed
+# 64: delayed mode only for older data
+
 import glob, os, sys, pandas, xarray, argparse, numpy, datetime
 from helpers import helpers
 
@@ -34,7 +43,7 @@ floats = []
 cycles = []
 flags = []
 
-rejects = pandas.DataFrame(columns=['float', 'cycle', 'longitude', 'latitude', 'position_qc', 'juld_qc', 'startup', 'APEX', 'pressure_sort', 'no_realtime', 'require_delayed', 'POSITION_QC_FLAG', 'JULD_QC_FLAG', 'JULD'])
+rejects = pandas.DataFrame(columns=['float', 'cycle', 'longitude', 'latitude', 'juld', 'flag'])
 
 for fn in glob.glob(os.path.join(source_dir, '*.nc')):
     print(fn)
@@ -78,51 +87,37 @@ for fn in glob.glob(os.path.join(source_dir, '*.nc')):
     PRES_ADJUSTED_ERROR = xar['PRES_ADJUSTED_ERROR'].to_dict()['data'][0]
 
     # drop lousy profiles
-    position_qc = False
-    juld_qc = False
-    startup = False
-    apex = False
-    pressure_sort = False
-    no_realtime = False
-    require_delayed = False
+    flag = 0
     ## QC 1 position
     if POSITION_QC not in [1]:
-        position_qc = True
+        flag += 1
     ## QC 1 time
     if JULD_QC not in [1,8]:
-        juld_qc = True
+        flag += 2
     ## no startup cycles
     if CYCLE_NUMBER == 0:
-        startup = True
+        flag += 4
     ## bad APEX floats
     if 20 in PRES_ADJUSTED_ERROR:
-        apex = True
+        flag += 8
     ## pressure out of order, more than 2.4dbar
     if any(x[0] - x[1] > 2.4 for x in zip(pres, pres[1:])):
-        pressure_sort = True
+        flag += 16
     ## no realtime variables ever
     #if DATA_MODE == 'R':
-    #    no_realtime = True
+    #    flag += 32
     ## delayed mode only 5+ years in the past
-    if JULD < datetime.datetime(2020,1,1) and DATA_MODE != 'D':
-        require_delayed = True
+    if JULD < datetime.datetime(2021,1,1) and DATA_MODE != 'D':
+        flag += 64
     ## if any of these are true, reject the profile
-    if position_qc or juld_qc or startup or apex or pressure_sort or no_realtime or require_delayed:
+    if flag > 0:
         rejects.loc[len(rejects)] = {
             'float': PLATFORM_NUMBER,
             'cycle': cycle,
             'longitude': LONGITUDE,
             'latitude': LATITUDE,
-            'position_qc': position_qc,
-            'POSITION_QC_FLAG': POSITION_QC,
-            'JULD_QC_FLAG': JULD_QC,
-            'JULD': JULD,
-            'juld_qc': juld_qc,
-            'startup': startup,
-            'APEX': apex,
-            'pressure_sort': pressure_sort,
-            'no_realtime': no_realtime,
-            'require_delayed': require_delayed
+            'juld': helpers.datetime_to_datenum(JULD),
+            'flag': flag
         }
         continue
 
@@ -161,7 +156,7 @@ for fn in glob.glob(os.path.join(source_dir, '*.nc')):
     pressures_qc.append(pres_qc)
     floats.append(PLATFORM_NUMBER)
     cycles.append(cycle)
-    flags.append(0)
+    flags.append(flag)
 
 df = pandas.DataFrame({
     'float': floats,

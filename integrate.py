@@ -1,3 +1,4 @@
+## see helpers/helpers.py for warning flag table
 import numpy, argparse, pandas, scipy, os
 from helpers import helpers
 
@@ -40,6 +41,7 @@ df = df.drop(columns=[variable+'_comb'])
 
 # dump any rows that failed to integrate
 rejects = df[df[variable+'_integration'].apply(lambda x: numpy.isnan(x[0]) )].reset_index(drop=True)
+rejects = rejects[['float', 'cycle', 'longitude', 'latitude', 'juld', 'flag']]
 df = df[~df[variable+'_integration'].apply(lambda x: numpy.isnan(x[0]) )].reset_index(drop=True)
 
 rejects.to_parquet(os.path.join(args.output_file.split('.')[0] + '_rejects.parquet'), engine='pyarrow')

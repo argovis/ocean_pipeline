@@ -1,3 +1,13 @@
+## warning flags applied during interpolation and / or integration
+# 1: degenerate levels have been dropped
+# 2: pressure was found to be monotonically decreasing; was reversed
+# 4: a variable of interest had NaNs / Nones
+# 8: pressure was found to be non-monartonic, was sorted
+# 16: insufficient data to interpolate over
+# 32: pressure had NaNs / Nones
+# 64: couldn't extrapolate to bounds of desired range
+# 128: interpolated levels were masked for being too far from a neighbor
+
 import numpy, datetime, scipy.interpolate, scipy.integrate, math, operator, juliandate, bisect, warnings, xarray, gsw
 
 def mljul(year, month, day, time):
@@ -88,12 +98,6 @@ def pad_bracket(lst, low_roi, high_roi, buffer, places):
 def tidy_profile(pressure, var, flag):
     # pchip needs pressures to be monotonically increasing; WOD needs some tidying in this regard.
     # also need the dependent variable to always be defined
-    # flags (little endian):
-    # 1: degenerate adjacent levels
-    # 2: levels in reverse order
-    # 4: variable of interest was NaN, masked
-    # 8: levels non-monotonic, had to sort
-    # 32: pressure was NaN, masked
 
     ## dependent variable must be defined
     mask = [0]*len(var)
@@ -140,10 +144,10 @@ def tidy_profile(pressure, var, flag):
     return tidy_profile(p,v,flag)
 
 
-def interpolate_to_levels(row, var, levels, pressure_buffer=100.0, pressure_index_buffer=5):
+def interpolate_to_levels(row, var, levels, pressure_buffer=-1, pressure_index_buffer=5):
     # interpolate <var> to <levels> using PCHIP interpolation
-    # keep <pressure_buffer> dbar on either side of the ROI and <pressure_index_buffer> points in the pressure buffer margins, at least.
-    # flag 16 (little endian): ROI didn't contain enough info to interpolate
+    # keep <pressure_buffer> dbar on either side of the ROI and <pressure_index_buffer> points in the pressure buffer margins, at least,
+    #    unless pressure_buffer < 0, in which case just keep the whole profile.
 
     pressure, variable, flag = tidy_profile(row['pressure'], row[var], row['flag'])
 
@@ -154,7 +158,9 @@ def interpolate_to_levels(row, var, levels, pressure_buffer=100.0, pressure_inde
         return interp, flag
 
     # find indexes of ROI
-    p_bracket = pad_bracket(pressure, levels[0], levels[-1], pressure_buffer, pressure_index_buffer)
+    p_bracket = [0, len(pressure)]
+    if pressure_buffer > 0:
+        p_bracket = pad_bracket(pressure, levels[0], levels[-1], pressure_buffer, pressure_index_buffer)
 
     # ROI must contain at least two points for Pchip
     if len(pressure[p_bracket[0]:p_bracket[1]+1]) < 2:
@@ -165,8 +171,13 @@ def interpolate_to_levels(row, var, levels, pressure_buffer=100.0, pressure_inde
         # interpolate; don't extrapolate to levels outside of measurement range
         interp = scipy.interpolate.PchipInterpolator(pressure[p_bracket[0]:p_bracket[1]+1], variable[p_bracket[0]:p_bracket[1]+1], extrapolate=False)(levels)
 
+        # flag prevented extrapolation
+        if levels[0] < pressure[0] or levels[-1] > pressure[-1]:
+            flag = flag | 64
+
         # if there wasn't a measured level within a certain radius of each level of interest, mask the interpolation at that level.
-        interp = mask_far_interps(pressure[p_bracket[0]:p_bracket[1]+1], levels, interp)
+        interp, f = mask_far_interps(pressure[p_bracket[0]:p_bracket[1]+1], levels, interp)
+        flag = flag | f
 
         return interp, flag
 
@@ -195,21 +206,16 @@ def filterQCandPressure(t,s,p, t_qc,s_qc,p_qc, pressure_qc, temperature_qc, sali
 def mask_far_interps(measured_pressures, interp_levels, interp_values):
     # mask interpolated values that are too far from the nearest measured pressure
 
+    flag = 0
     for i, level in enumerate(interp_levels):
         ## determine how far is too far:
         radius = 0
-        if level < 100:
-            radius = 10
+        if level < 50:
+            radius = 50
         elif level < 150:
-            radius = 20
-        elif level < 250:
-            radius = 40
-        elif level < 350:
-            radius = 60
-        elif level < 450:
-            radius = 80
+            radius = 150
         else:
-            radius = 100
+            radius = 500
 
         i_below = 0
         i_above = len(measured_pressures)-1
@@ -221,8 +227,10 @@ def mask_far_interps(measured_pressures, interp_levels, interp_values):
                 break
         if abs(measured_pressures[i_below] - level) > radius or abs(measured_pressures[i_above] - level) > radius:
             interp_values[i] = numpy.nan
+            flag = 128
 
-    return interp_values
+
+    return interp_values, flag
 
 def integration_region(region, pressure, variable):
     # perform intrgation of <variable> over <pressure> for a list of <regions> specified as tuples of (low_roi, high_roi)
@@ -263,7 +271,7 @@ def choose_profile(group):
     return group.iloc[preferred]
 
 def merge_qc(qc_lists):
-    if len(qc_lists[0] > 0):
+    if len(qc_lists[0]) > 0:
         return [max(column) for column in zip(*qc_lists)]
     else:
         return []

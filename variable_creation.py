@@ -1,4 +1,8 @@
-import numpy, argparse, glob, pandas, gsw
+## reject flag table
+# 1: failed MLD calculation
+# 2: failed dynamic sea height calculation
+
+import numpy, argparse, glob, pandas, gsw, os
 from helpers import helpers
 
 # argument setup
@@ -14,8 +18,10 @@ parser.add_argument("--output_file", type=str, help="name of output file, with p
 parser.add_argument("--variable", type=csv_list, help="variable to compute: one of absolute_salinity, potential_temperature, conservative_temperature, potential_density, or mld")
 parser.add_argument("--pressure_range", type=float_list, help="[min, max] pressure range")
 args = parser.parse_args()
-
 df = pandas.read_parquet(args.input_file, engine='pyarrow')
+
+rejects = pandas.DataFrame(columns=['float', 'cycle', 'longitude', 'latitude', 'juld', 'flag'])
+
 if len(df) > 0:
     for var in args.variable:
 
@@ -78,6 +84,10 @@ if len(df) > 0:
             )
 
             # abandon profiles for which we could not calculate a mld
+            dumps = df[df['mld'].apply(lambda x: x == [None])].reset_index(drop=True)
+            dumps = dumps[['float', 'cycle', 'longitude', 'latitude', 'juld']]
+            dumps['flag'] = 1
+            rejects = pandas.concat([rejects,dumps], ignore_index=True)
             df = df[df['mld'].apply(lambda x: x != [None])].reset_index(drop=True)
 
             df['mld_qc'] = df.apply(
@@ -91,7 +101,11 @@ if len(df) > 0:
                 axis=1
             )
 
-            # abandon profiles for which we could not calculate a mld
+            # abandon profiles for which we could not calculate a height
+            dumps = df[df['dynamic_height_anom'].apply(lambda x: x == [None])].reset_index(drop=True)
+            dumps = dumps[['float', 'cycle', 'longitude', 'latitude', 'juld']]
+            dumps['flag'] = 2
+            rejects = pandas.concat([rejects,dumps], ignore_index=True)
             df = df[df['dynamic_height_anom'].apply(lambda x: x != [None])].reset_index(drop=True)
 
             df['dynamic_height_anom_qc'] = df.apply(
@@ -99,4 +113,6 @@ if len(df) > 0:
                 axis=1
             )
 
+
+rejects.to_parquet(os.path.join(args.output_file.split('.')[0] + '_rejects.parquet'), engine='pyarrow')
 df.to_parquet(args.output_file, engine='pyarrow')

@@ -88,10 +88,10 @@ def test_integrate_roi():
 def test_mask_far_interps():
 
     insitu_pres = numpy.array([0.,1.,2.,3.,4.,5.,6.,7.,8.,9.,15.])
-    interp_pres = numpy.array([4.5, 25, 25.1]) # note its not this function's job to disqualify levels outside of the range of measurements, only interpolated levels that don't have a close neighbor.
+    interp_pres = numpy.array([4.5, 25.0, 1000.0]) # note its not this function's job to disqualify levels outside of the range of measurements, only interpolated levels that don't have a close neighbor.
     interp_vals = numpy.array([0.,1.,2.])
 
-    assert numpy.allclose(helpers.mask_far_interps(insitu_pres, interp_pres, interp_vals), [0,1,numpy.nan],equal_nan=True), 'basic mask'
+    assert numpy.allclose(helpers.mask_far_interps(insitu_pres, interp_pres, interp_vals)[0], [0,1,numpy.nan],equal_nan=True), 'basic mask'
 
 def test_interpolate_to_levels():
 
@@ -104,7 +104,7 @@ def test_interpolate_to_levels():
     assert numpy.allclose(helpers.interpolate_to_levels(df.iloc[0], 'temperature', [2,4,6])[0], [20,40, numpy.nan], equal_nan=True), 'dont run off end of insitu data'
     assert numpy.allclose(helpers.interpolate_to_levels(df.iloc[0], 'temperature', [0.9999,2,4])[0], [numpy.nan,20,40], equal_nan=True), 'dont run off start of insitu data'
     assert numpy.allclose(helpers.interpolate_to_levels(df.iloc[1], 'temperature', [2,4,6])[0], [numpy.nan,40,numpy.nan], equal_nan=True), 'degenerate profile'
-    assert numpy.allclose(helpers.interpolate_to_levels(df.iloc[1], 'temperature', [2,4,6])[1], 1), 'degenerate profile flagging'
+    assert numpy.allclose(helpers.interpolate_to_levels(df.iloc[1], 'temperature', [2,4,6])[1], 65), 'degenerate profile + cant extrapolate flagging'
 
 def test_integration_regions():
 
