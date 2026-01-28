@@ -89,10 +89,10 @@ for fn in glob.glob(os.path.join(source_dir, '*.nc')):
     # drop lousy profiles
     flag = 0
     ## QC 1 position
-    if POSITION_QC not in [1]:
+    if POSITION_QC not in [1,2]:
         flag += 1
     ## QC 1 time
-    if JULD_QC not in [1,8]:
+    if JULD_QC not in [1,2,8]:
         flag += 2
     ## no startup cycles
     if CYCLE_NUMBER == 0:
@@ -106,7 +106,7 @@ for fn in glob.glob(os.path.join(source_dir, '*.nc')):
     ## no realtime variables ever
     #if DATA_MODE == 'R':
     #    flag += 32
-    ## delayed mode only 5+ years in the past
+    # delayed mode only 5+ years in the past
     if JULD < datetime.datetime(2021,1,1) and DATA_MODE != 'D':
         flag += 64
     ## if any of these are true, reject the profile

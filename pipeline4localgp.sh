@@ -8,21 +8,21 @@ declare upstream='argonc' 			# 'argovis', 'wod' or 'argonc'
 declare data_dir=$1				# where is the relevant upstream data?
 declare year=$2					# year this data corresponds to
 declare month=$3				# month this data corresponds to
-declare runtag=$4                               # unique ID for this run
+declare runtag='OP20260127'                               # unique ID for this run
 declare vartype='integration'                   # 'integration', 'interpolation', or 'none' (if no interpoltions or integrations needed)
 declare variable='potential_temperature'        # 'absolute_salinity', 'potential_temperature', 'conservative_temperature', 'potential_density', 'mld', 'dynamic_height_anom'
 declare level=50                                # dbar to interpolate to in interpolation mode
-declare region='15,20'                         # integration dbar region, string CSV, in integration mode
-declare pqc='1'                                   # qc to keep for pressure, can be single valued (0) or string CSV ('0,1')
-declare tqc='1'                                   # qc to keep for temeprature
-declare sqc='1'                               # qc to keep for salinity
+declare region='1800,1850'                         # integration dbar region, string CSV, in integration mode
+declare pqc='1,2'                                   # qc to keep for pressure, can be single valued (0) or string CSV ('0,1')
+declare tqc='1,2'                                   # qc to keep for temeprature
+declare sqc='1,2'                               # qc to keep for salinity
 declare wod_filetypes='PFL,MRB,CTD'		# WOD filetypes, wod only
 
 # don't touch below this line -------------------------------------------------------------------
 
 # Input validation
-if [ "$#" -ne 4 ]; then
-  echo "Usage: $0 <directory contianing one month of upstream data> <year> <month> <runtag>" >&2
+if [ "$#" -ne 3 ]; then
+  echo "Usage: $0 <directory contianing one month of upstream data> <year> <month>" >&2
   exit 1
 fi
 if [ ! -e "$data_dir" ]; then
@@ -37,25 +37,21 @@ if ! [[ "$month" =~ ^-?[0-9]+$ ]]; then
   echo "Error: '$month' is not a valid month, 1-12." >&2
   exit 1
 fi
-if [ -z "$runtag" ]; then
-  echo "Error: string argument is empty." >&2
-  exit 1
-fi
 
 # data prep
 qctag="p${pqc//,/}_t${tqc//,/}_s${sqc//,/}"
 selectionfile=${data_dir}/${runtag}_${year}_${month}_${qctag}_selected_profiles.parquet
-if [[ $upstream == 'wod' ]]; then
-    declare prep_id=$(sbatch --parsable wod.slurm $data_dir $year $month $wod_filetypes $pqc $tqc $sqc $selectionfile)
-elif [[ $upstream == 'argovis' ]]; then
-    declare prep_id=$(sbatch --parsable argovis.slurm $data_dir $year $month $selectionfile $pqc $tqc $sqc)
-elif [[ $upstream == 'argonc' ]]; then
-    declare prep_id=$(sbatch --parsable argonc.slurm $data_dir $year $month $selectionfile $pqc $tqc $sqc)
-fi
+#if [[ $upstream == 'wod' ]]; then
+#    declare prep_id=$(sbatch --parsable wod.slurm $data_dir $year $month $wod_filetypes $pqc $tqc $sqc $selectionfile)
+#elif [[ $upstream == 'argovis' ]]; then
+#    declare prep_id=$(sbatch --parsable argovis.slurm $data_dir $year $month $selectionfile $pqc $tqc $sqc)
+#elif [[ $upstream == 'argonc' ]]; then
+#    declare prep_id=$(sbatch --parsable argonc.slurm $data_dir $year $month $selectionfile $pqc $tqc $sqc)
+#fi
 
 varfile=${data_dir}/${runtag}_${year}_${month}_${qctag}_${variable}.parquet
-declare varcreation=$(sbatch --parsable --dependency=afterok:$prep_id variable_creation.slurm $selectionfile $variable ${varfile} ${region})
-#declare varcreation=$(sbatch --parsable variable_creation.slurm $selectionfile $variable ${varfile} ${region})
+#declare varcreation=$(sbatch --parsable --dependency=afterok:$prep_id variable_creation.slurm $selectionfile $variable ${varfile} ${region})
+declare varcreation=$(sbatch --parsable variable_creation.slurm $selectionfile $variable ${varfile} ${region})
 
 if [[ $vartype == 'interpolation' ]]; then
     interpfile=${data_dir}/${runtag}_${year}_${month}_${qctag}_${variable}_interpolated_${level}.parquet
