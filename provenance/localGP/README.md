@@ -169,3 +169,27 @@ First tag on 2026 Argo DOI; also includes some improved audit logging for ocean-
    - tag: https://github.com/argovis/localGP/releases/tag/OP20251216
    - input masks: https://github.com/argovis/localGP_masks/releases/tag/OP20260110
  - data origin: https://doi.org/10.17882/42182#125185
+
+## OP20260110b series
+
+As OP20260110 but excluding realtime data.
+
+ - python env: https://github.com/argovis/ocean_pipeline/blob/main/provenance/environments/python-dev-env.txt
+ - ocean-pipeline
+   - tag: https://github.com/argovis/ocean_pipeline/releases/tag/OP20260110
+ - localGP
+   - tag: https://github.com/argovis/localGP/releases/tag/OP20251216
+   - input masks: https://github.com/argovis/localGP_masks/releases/tag/OP20260110
+ - data origin: https://doi.org/10.17882/42182#125185
+
+## OP20260127 series
+
+Allows QC 2 for pressure, temperature, salinity, JULD QC and location QC; allows realtime data for the last 5 years
+
+ - python env: https://github.com/argovis/ocean_pipeline/blob/main/provenance/environments/python-dev-env.txt
+ - ocean-pipeline
+   - tag: https://github.com/argovis/ocean_pipeline/releases/tag/OP20260127
+ - localGP
+   - tag: https://github.com/argovis/localGP/releases/tag/OP20251216
+   - input masks: https://github.com/argovis/localGP_masks/releases/tag/OP20260110
+ - data origin: https://doi.org/10.17882/42182#125185
