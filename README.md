@@ -32,17 +32,8 @@ After downloading the DOI of interest or rsyncing one of the GDACs, sort the pro
 
 ### Processing pipeline
 
-Once input netCDF files are sorted by month, `pipeline4localgp.sh` supports preparing these files for consumption by localGP. Start by setting appropriate variables for this run in the block at the top.
-This script launches an appropriate pipeline of jobs on a slurm-managed cluster.
+Once input netCDF files are sorted by month, `pipeline4localgp.sh` supports preparing these files for consumption by localGP:
 
-## Argovis JSON -> localGP
-
-Preparing Argo data as represented by Argovis for consumption by localGP proceeds as follows:
-
-### Data acquisition
-
-`argovis-dl.sh` will manage the download of Argo data from Argovis month by month; data will be placed in per-month folders in the same directory as the download script.
-
-### Processing pipeline
-
-`pipeline4localgp.sh` works similarly for Argovis as it does for Argo netCDF files; choose appropriate parameters in the block at the top, and then loop over months to generate viable localGP inputs.
+ - Start by setting appropriate variables for this run in the block at the top of `pipeline4localgp.sh`.
+ - Run `launch_localgp_pipelines.sh` to launch an appropriate pipeline of jobs for the study period on a slurm-managed cluster. Make sure to provide the appropriate paths to wherever you sorted your data in the previous step.
+ - Each YYYY_MM directory will have an appropriately named .mat file representing the profiles for that month. Write a script to copy them into your target directory for localGP, `xx/MonthlyInputs/2004_2025/.`
