@@ -107,8 +107,8 @@ for fn in glob.glob(os.path.join(source_dir, '*.nc')):
     #if DATA_MODE == 'R':
     #    flag += 32
     # delayed mode only 5+ years in the past
-    if JULD < datetime.datetime(2021,1,1) and DATA_MODE != 'D':
-        flag += 64
+    #if JULD < datetime.datetime(2021,1,1) and DATA_MODE != 'D':
+    #    flag += 64
     ## if any of these are true, reject the profile
     if flag > 0:
         rejects.loc[len(rejects)] = {

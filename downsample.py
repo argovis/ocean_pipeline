@@ -11,13 +11,13 @@ args = parser.parse_args()
 df = pandas.read_parquet(args.input_file, engine='pyarrow')
 
 if len(df):
-    binsize = 0.1 # 0.5
+    binsize = 0.25
     df['lon_bin'] = numpy.floor(df['longitude'] / binsize)
     df['lat_bin'] = numpy.floor(df['latitude'] / binsize)
     df['week_bin'] = numpy.floor(df['juld'] / 7)
     df['day_bin'] = numpy.floor(df['juld'])
 
-    group_cols = ['lon_bin', 'lat_bin', 'day_bin']
+    group_cols = ['lon_bin', 'lat_bin', 'week_bin']
     winner_idx = (df.groupby(group_cols, sort=False).apply(lambda g: helpers.choose_profile(g).name)).to_numpy()
 
     # use the group winner's float_cycle as the flag value for rejected profiles

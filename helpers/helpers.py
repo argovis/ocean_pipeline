@@ -215,7 +215,7 @@ def mask_far_interps(measured_pressures, interp_levels, interp_values):
         elif level < 150:
             radius = 150
         else:
-            radius = 500
+            radius = 200
 
         i_below = 0
         i_above = len(measured_pressures)-1
