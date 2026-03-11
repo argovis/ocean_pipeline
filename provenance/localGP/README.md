@@ -193,3 +193,15 @@ Allows QC 2 for pressure, temperature, salinity, JULD QC and location QC; allows
    - tag: https://github.com/argovis/localGP/releases/tag/OP20251216
    - input masks: https://github.com/argovis/localGP_masks/releases/tag/OP20260110
  - data origin: https://doi.org/10.17882/42182#125185
+
+## OP20260310 series
+
+Compared to OP20260127: Keep JULD QC 1,2,8, position QC 1,2, and TSp QC 1,2; keep best of DAR as available regardless of age; allow maximum 200 dbar gaps between interpolated and in situ data; and downsample on 0.25 degree x 1 week bins. 
+
+ - python env: https://github.com/argovis/ocean_pipeline/blob/main/provenance/environments/python-dev-env.txt
+ - ocean-pipeline
+   - tag: https://github.com/argovis/ocean_pipeline/releases/tag/OP20260310
+ - localGP
+   - tag: https://github.com/argovis/localGP/releases/tag/OP20260310
+   - input masks: https://github.com/argovis/localGP_masks/releases/tag/OP20260110
+ - data origin: https://doi.org/10.17882/42182#125185
