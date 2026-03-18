@@ -362,3 +362,139 @@ def safe_open_dataset(fn):
                 print(f"⚠️ Time cast warning in: {fn}; JULD: {str(date)}, JULD_QC: {juldqc}, REFERENCE_DATE_TIME: {refdate}")
 
         return xar
+
+def steric_hgt_anom(row):
+    # calculate the steric sea height anomaly based on the methodology of https://ecco-v4-python-tutorial.readthedocs.io/Steric_height.html
+    # row must have temperature, salinity and pressure all available.
+
+    S_Ar = 35.16504
+    T_Cr = 0.
+    g = 9.81
+    if 'absolute_salinity' in row:
+        sal_abs = row['absolute_salinity']
+    else:
+        sal_abs = gsw.conversions.SA_from_SP(row['salinity'], row['pressure'], row['longitude'], row['latitude'])
+    if 'conservative_temperature' in row:
+        temp_cons = row['conservative_temperature']
+    else:
+        temp_cons = gsw.conversions.CT_from_t(sal_abs, row['temperature'], row['pressure'])
+    dens = gsw.density.rho(sal_abs, temp_cons, row['pressure'])
+    specvol_standard = gsw.density.specvol(S_Ar,T_Cr,row['pressure'])
+
+    specvol_anom = 1/dens - specvol_standard
+    p_pa = [10000*x for x in row['pressure']] # must integrate in Pa
+    pressurecomb = integration_comb([p_pa[0], p_pa[-1]], spacing=2000)
+    sshacomb, _ = interpolate_to_levels(p_pa, specvol_anom/g, pressurecomb)
+
+    # integrate until we get to 2000 dbar, or the end of the profile if it doesn't go that deep
+    x = pressurecomb < 20000000
+    cut_idx = list(x).index(False)
+    steric_hgt_anom = scipy.integrate.trapezoid(sshacomb[0:cut_idx], x=pressurecomb[0:cut_idx])
+
+    return steric_hgt_anom
+
+def thermosteric_hgt_anom_linear(row):
+    # calculate the thermosteric sea height anomaly term based on the linear expansion methodology of https://ecco-v4-python-tutorial.readthedocs.io/Steric_height.html
+
+    S_Ar = 35.16504
+    T_Cr = 0.
+    g = 9.81
+    if 'absolute_salinity' in row:
+        sal_abs = row['absolute_salinity']
+    else:
+        sal_abs = gsw.conversions.SA_from_SP(row['salinity'], row['pressure'], row['longitude'], row['latitude'])
+    if 'conservative_temperature' in row:
+        temp_cons = row['conservative_temperature']
+    else:
+        temp_cons = gsw.conversions.CT_from_t(sal_abs, row['temperature'], row['pressure'])
+    specvol_standard = gsw.density.specvol(S_Ar,T_Cr,row['pressure'])
+    alpha = gsw.density.alpha(S_Ar,T_Cr,row['pressure'])
+
+    specvol_thermo_anom_linear = specvol_standard*alpha*(temp_cons - T_Cr)
+    p_pa = [10000*x for x in row['pressure']] # must integrate in Pa
+    pressurecomb = integration_comb([p_pa[0], p_pa[-1]], spacing=2000)
+    thalcomb, _ = interpolate_to_levels(p_pa, specvol_thermo_anom_linear/g, pressurecomb)
+
+    # integrate until we get to 2000 dbar, or the end of the profile if it doesn't go that deep
+    x = pressurecomb < 20000000
+    cut_idx = list(x).index(False)
+    thermosteric_hgt_anom_linear = scipy.integrate.trapezoid(thalcomb[0:cut_idx], x=pressurecomb[0:cut_idx])
+
+    return thermosteric_hgt_anom_linear
+
+def halosteric_hgt_anom_linear(row):
+    # calculate the halosteric sea height anomaly term based on the linear expansion methodology of https://ecco-v4-python-tutorial.readthedocs.io/Steric_height.html
+
+    S_Ar = 35.16504
+    T_Cr = 0.
+    g = 9.81
+    if 'absolute_salinity' in row:
+        sal_abs = row['absolute_salinity']
+    else:
+        sal_abs = gsw.conversions.SA_from_SP(row['salinity'], row['pressure'], row['longitude'], row['latitude'])
+    specvol_standard = gsw.density.specvol(S_Ar,T_Cr,row['pressure'])
+    beta = gsw.density.beta(S_Ar,T_Cr,row['pressure'])
+
+    specvol_halo_anom_linear = -specvol_standard*beta*(sal_abs - S_Ar)
+    p_pa = [10000*x for x in row['pressure']] # must integrate in Pa
+    pressurecomb = integration_comb([p_pa[0], p_pa[-1]], spacing=2000)
+    hhalcomb, _ = interpolate_to_levels(p_pa, specvol_halo_anom_linear/g, pressurecomb)
+
+    # integrate until we get to 2000 dbar, or the end of the profile if it doesn't go that deep
+    x = pressurecomb < 20000000
+    cut_idx = list(x).index(False)
+    halosteric_hgt_anom_linear = scipy.integrate.trapezoid(hhalcomb[0:cut_idx], x=pressurecomb[0:cut_idx])
+
+    return halosteric_hgt_anom_linear
+
+def thermosteric_hgt_anom(row):
+    # calculate the thermosteric sea height anomaly term based on the change in specific volume methodology of https://ecco-v4-python-tutorial.readthedocs.io/Steric_height.html
+
+    S_Ar = 35.16504
+    T_Cr = 0.
+    g = 9.81
+    if 'absolute_salinity' in row:
+        sal_abs = row['absolute_salinity']
+    else:
+        sal_abs = gsw.conversions.SA_from_SP(row['salinity'], row['pressure'], row['longitude'], row['latitude'])
+    if 'conservative_temperature' in row:
+        temp_cons = row['conservative_temperature']
+    else:
+        temp_cons = gsw.conversions.CT_from_t(sal_abs, row['temperature'], row['pressure'])
+    specvol_standard = gsw.density.specvol(S_Ar,T_Cr,row['pressure'])
+
+    specvol_thermo_anom = gsw.density.specvol(S_Ar,temp_cons,row['pressure']) - specvol_standard
+    p_pa = [10000*x for x in row['pressure']] # must integrate in Pa
+    pressurecomb = integration_comb([p_pa[0], p_pa[-1]], spacing=2000)
+    thacomb, _ = interpolate_to_levels(p_pa, specvol_thermo_anom/g, pressurecomb)
+
+    # integrate until we get to 2000 dbar, or the end of the profile if it doesn't go that deep
+    x = pressurecomb < 20000000
+    cut_idx = list(x).index(False)
+    thermosteric_hgt_anom = scipy.integrate.trapezoid(thacomb[0:cut_idx], x=pressurecomb[0:cut_idx])
+
+    return thermosteric_hgt_anom
+
+def halosteric_hgt_anom(row):
+    # calculate the halosteric sea height anomaly term baed on the change in specific volume methodology of https://ecco-v4-python-tutorial.readthedocs.io/Steric_height.html
+
+    S_Ar = 35.16504
+    T_Cr = 0.
+    g = 9.81
+    if 'absolute_salinity' in row:
+        sal_abs = row['absolute_salinity']
+    else:
+        sal_abs = gsw.conversions.SA_from_SP(row['salinity'], row['pressure'], row['longitude'], row['latitude'])
+    specvol_standard = gsw.density.specvol(S_Ar,T_Cr,row['pressure'])
+
+    specvol_halo_anom = gsw.density.specvol(sal_abs,T_Cr,row['pressure']) - specvol_standard
+    p_pa = [10000*x for x in row['pressure']] # must integrate in Pa
+    pressurecomb = integration_comb([p_pa[0], p_pa[-1]], spacing=2000)
+    hhacomb, _ = interpolate_to_levels(p_pa, specvol_halo_anom/g, pressurecomb)
+
+    # integrate until we get to 2000 dbar, or the end of the profile if it doesn't go that deep
+    x = pressurecomb < 20000000
+    cut_idx = list(x).index(False)
+    halosteric_hgt_anom = scipy.integrate.trapezoid(hhacomb[0:cut_idx], x=pressurecomb[0:cut_idx])
+
+    return halosteric_hgt_anom
