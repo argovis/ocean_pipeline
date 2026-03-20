@@ -114,7 +114,7 @@ if len(df) > 0:
             )
 
         # boilerplate, can probably merge some others in here
-        if var in ['steric_hgt_anom', 'thermosteric_hgt_anom_linear', 'halosteric_hgt_anom_linear', 'thermosteric_hgt_anom', 'halosteric_hgt_anom']
+        if var in ['steric_hgt_anom', 'thermosteric_hgt_anom_linear', 'halosteric_hgt_anom_linear', 'thermosteric_hgt_anom', 'halosteric_hgt_anom']:
             estimators = {
                 "steric_hgt_anom": helpers.steric_hgt_anom,
                 "thermosteric_hgt_anom_linear": helpers.thermosteric_hgt_anom_linear,
