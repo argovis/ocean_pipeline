@@ -205,3 +205,15 @@ Compared to OP20260127: Keep JULD QC 1,2,8, position QC 1,2, and TSp QC 1,2; kee
    - tag: https://github.com/argovis/localGP/releases/tag/OP20260310
    - input masks: https://github.com/argovis/localGP_masks/releases/tag/OP20260110
  - data origin: https://doi.org/10.17882/42182#125185
+
+## OP20260320 series
+
+Compared to previous: Implements steric sea height anomaly estimators from https://ecco-v4-python-tutorial.readthedocs.io/Steric_height.html.
+
+ - python env: https://github.com/argovis/ocean_pipeline/blob/main/provenance/environments/python-dev-env.txt
+ - ocean-pipeline
+   - tag: https://github.com/argovis/ocean_pipeline/releases/tag/OP20260320
+ - localGP
+   - tag: https://github.com/argovis/localGP/releases/tag/OP20260310
+   - input masks: https://github.com/argovis/localGP_masks/releases/tag/OP20260110
+ - data origin: https://doi.org/10.17882/42182#125185
