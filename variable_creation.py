@@ -113,6 +113,38 @@ if len(df) > 0:
                 axis=1
             )
 
+        # boilerplate, can probably merge some others in here
+        if var in ['steric_hgt_anom', 'thermosteric_hgt_anom_linear', 'halosteric_hgt_anom_linear', 'thermosteric_hgt_anom', 'halosteric_hgt_anom']
+            estimators = {
+                "steric_hgt_anom": helpers.steric_hgt_anom,
+                "thermosteric_hgt_anom_linear": helpers.thermosteric_hgt_anom_linear,
+                "halosteric_hgt_anom_linear": helpers.halosteric_hgt_anom_linear,
+                "thermosteric_hgt_anom": helpers.thermosteric_hgt_anom,
+                "halosteric_hgt_anom": helpers.halosteric_hgt_anom
+            }
+            flags = {
+                "steric_hgt_anom": 4,
+                "thermosteric_hgt_anom_linear": 8,
+                "halosteric_hgt_anom_linear": 16,
+                "thermosteric_hgt_anom": 32,
+                "halosteric_hgt_anom": 64
+            }
+            df[var] = df.apply(
+                lambda row: estimators[var](row),
+	        axis=1
+            )
+
+            # abandon profiles for which we could not calculate a mld
+            dumps = df[df[var].apply(lambda x: x == [None])].reset_index(drop=True)
+            dumps = dumps[['float', 'cycle', 'longitude', 'latitude', 'juld']]
+            dumps['flag'] = flags[var]
+            rejects = pandas.concat([rejects,dumps], ignore_index=True)
+            df = df[df[var].apply(lambda x: x != [None])].reset_index(drop=True)
+
+            df[f'{var}_qc'] = df.apply(
+                lambda row: helpers.merge_qc([row['salinity_qc'], row['temperature_qc'], row['pressure_qc']]),
+                axis=1
+            )
 
 rejects.to_parquet(os.path.join(args.output_file.split('.')[0] + '_rejects.parquet'), engine='pyarrow')
 df.to_parquet(args.output_file, engine='pyarrow')
