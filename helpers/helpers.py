@@ -244,7 +244,6 @@ def integration_comb(region, spacing=0.2):
 
     pressure = []
     low_roi, high_roi = region
-    print(low_roi, high_roi, spacing)
     pressure.extend(numpy.arange(low_roi, high_roi+spacing, spacing))
 
     return numpy.round(pressure, 6)
@@ -393,7 +392,6 @@ def steric_hgt_anom(row, testbit=False):
         temp_cons = gsw.conversions.CT_from_t(sal_abs, row['temperature'], row['pressure'])
 
     # cleaning - only consider levels where all necessary variables are nonnan (no, QC does not cover this)
-    print(row)
     pressure, temp_cons, sal_abs = all_present(row['pressure'],temp_cons,sal_abs)
     if len(pressure) == 0 or len(sal_abs) == 0 or len(temp_cons) == 0:
         return [None]
