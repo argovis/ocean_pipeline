@@ -391,9 +391,9 @@ def steric_hgt_anom(row, testbit=False):
     else:
         temp_cons = gsw.conversions.CT_from_t(sal_abs, row['temperature'], row['pressure'])
 
-    # cleaning - only consider levels where all necessary variables are nonnan (no, QC does not cover this)
+    # cleaning - only consider levels where all necessary variables are nonnan (no, QC does not cover this) and pressure is something basically civilized
     pressure, temp_cons, sal_abs = all_present(row['pressure'],temp_cons,sal_abs)
-    if len(pressure) == 0 or len(sal_abs) == 0 or len(temp_cons) == 0:
+    if len(pressure) < 2 or ~all(pressure[i] < pressure[i + 1] for i in range(len(pressure) - 1)) or len(sal_abs) == 0 or len(temp_cons) == 0:
         return [None]
 
     dens = gsw.density.rho(sal_abs, temp_cons, pressure)
@@ -404,6 +404,7 @@ def steric_hgt_anom(row, testbit=False):
         return specvol_anom
 
     pressurecomb = integration_comb([pressure[0], pressure[-1]])
+    print(pressure, pressurecomb)
     sshacomb, _ = interpolate_to_levels({'pressure': pressure, 'specvol_anom': specvol_anom, 'flag': row['flag']}, 'specvol_anom', pressurecomb)
     sshacomb = sshacomb/g
     pressurecomb = numpy.array([10000*x for x in pressurecomb]) # must integrate in Pa
@@ -437,7 +438,7 @@ def thermosteric_hgt_anom_linear(row, testbit=False):
 
     # cleaning - only consider levels where all necessary variables are nonnan (no, QC does not cover this)
     pressure, temp_cons, sal_abs = all_present(row['pressure'],temp_cons,sal_abs)
-    if len(pressure) == 0 or len(sal_abs) == 0 or len(temp_cons) == 0:
+    if len(pressure) < 2 or ~all(pressure[i] < pressure[i + 1] for i in range(len(pressure) - 1)) or len(sal_abs) == 0 or len(temp_cons) == 0:
         return [None]
 
     specvol_standard = gsw.density.specvol(S_Ar,T_Cr,pressure)
@@ -476,7 +477,7 @@ def halosteric_hgt_anom_linear(row, testbit=False):
 
     # cleaning - only consider levels where all necessary variables are nonnan (no, QC does not cover this)
     pressure, sal_abs = all_present(row['pressure'],sal_abs)
-    if len(pressure) == 0 or len(sal_abs) == 0:
+    if len(pressure) < 2 or ~all(pressure[i] < pressure[i + 1] for i in range(len(pressure) - 1)) or len(sal_abs) == 0:
         return [None]
 
     specvol_standard = gsw.density.specvol(S_Ar,T_Cr,pressure)
@@ -519,7 +520,7 @@ def thermosteric_hgt_anom(row, testbit=False):
 
     # cleaning - only consider levels where all necessary variables are nonnan (no, QC does not cover this)
     pressure, temp_cons, sal_abs = all_present(row['pressure'],temp_cons,sal_abs)
-    if len(pressure) == 0 or len(sal_abs) == 0 or len(temp_cons) == 0:
+    if len(pressure) < 2 or ~all(pressure[i] < pressure[i + 1] for i in range(len(pressure) - 1)) or len(sal_abs) == 0 or len(temp_cons) == 0:
         return [None]
 
     specvol_standard = gsw.density.specvol(S_Ar,T_Cr,pressure)
@@ -557,7 +558,7 @@ def halosteric_hgt_anom(row, testbit=False):
 
     # cleaning - only consider levels where all necessary variables are nonnan (no, QC does not cover this)
     pressure, sal_abs = all_present(row['pressure'],sal_abs)
-    if len(pressure) == 0 or len(sal_abs) == 0:
+    if len(pressure) < 2 or ~all(pressure[i] < pressure[i + 1] for i in range(len(pressure) - 1)) or len(sal_abs) == 0:
         return [None]
 
     specvol_standard = gsw.density.specvol(S_Ar,T_Cr,pressure)
