@@ -368,9 +368,9 @@ def all_present(*arrays):
     # filter off any level that is undefined for any variable
     levels = list(zip(*arrays))
     levels = [x for x in levels if numpy.all(~numpy.isnan(x))]
-    vectors = [list(x) for x in list(zip(*levels))]
+    vectors = [numpy.array(x) for x in list(zip(*levels))]
     if len(vectors) == 0:
-        return [[]]*len(arrays)
+        return [numpy.array([])]*len(arrays)
     else:
         return vectors
 
