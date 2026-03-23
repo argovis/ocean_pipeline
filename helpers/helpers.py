@@ -399,12 +399,12 @@ def steric_hgt_anom(row, testbit=False):
     dens = gsw.density.rho(sal_abs, temp_cons, pressure)
     specvol_standard = gsw.density.specvol(S_Ar,T_Cr,pressure)
 
-    row['specvol_anom'] = 1/dens - specvol_standard
+    specvol_anom = 1/dens - specvol_standard
     if testbit:
-        return row['specvol_anom']
+        return specvol_anom
 
     pressurecomb = integration_comb([pressure[0], pressure[-1]])
-    sshacomb, _ = interpolate_to_levels(row, 'specvol_anom', pressurecomb)
+    sshacomb, _ = interpolate_to_levels({'pressure': pressure, 'specvol_anom': specvol_anom, 'flag': row['flag']}, 'specvol_anom', pressurecomb)
     sshacomb = sshacomb/g
     pressurecomb = numpy.array([10000*x for x in pressurecomb]) # must integrate in Pa
 
@@ -443,11 +443,12 @@ def thermosteric_hgt_anom_linear(row, testbit=False):
     specvol_standard = gsw.density.specvol(S_Ar,T_Cr,pressure)
     alpha = gsw.density.alpha(S_Ar,T_Cr,pressure)
 
-    row['specvol_thermo_anom_linear'] = specvol_standard*alpha*(temp_cons - T_Cr)
+    specvol_thermo_anom_linear = specvol_standard*alpha*(temp_cons - T_Cr)
     if testbit:
-        return row['specvol_thermo_anom_linear']
+        return specvol_thermo_anom_linear
+
     pressurecomb = integration_comb([pressure[0], pressure[-1]])
-    thalcomb, _ = interpolate_to_levels(row, 'specvol_thermo_anom_linear', pressurecomb)
+    thalcomb, _ = interpolate_to_levels({'pressure': pressure, 'specvol_thermo_anom_linear': specvol_thermo_anom_linear, 'flag': row['flag']}, 'specvol_thermo_anom_linear', pressurecomb)
     thalcomb = thalcomb/g
     pressurecomb = numpy.array([x*10000 for x in pressurecomb])
 
@@ -481,11 +482,12 @@ def halosteric_hgt_anom_linear(row, testbit=False):
     specvol_standard = gsw.density.specvol(S_Ar,T_Cr,pressure)
     beta = gsw.density.beta(S_Ar,T_Cr,pressure)
 
-    row['specvol_halo_anom_linear'] = -specvol_standard*beta*(sal_abs - S_Ar)
+    specvol_halo_anom_linear = -specvol_standard*beta*(sal_abs - S_Ar)
     if testbit:
-        return row['specvol_halo_anom_linear']
+        return specvol_halo_anom_linear
+
     pressurecomb = integration_comb([pressure[0], pressure[-1]])
-    hhalcomb, _ = interpolate_to_levels(row, 'specvol_halo_anom_linear', pressurecomb)
+    hhalcomb, _ = interpolate_to_levels({'pressure': pressure, 'specvol_halo_anom_linear': specvol_halo_anom_linear, 'flag': row['flag']}, 'specvol_halo_anom_linear', pressurecomb)
     hhalcomb = hhalcomb/g
     pressurecomb = numpy.array([x*10000 for x in pressurecomb])
 
@@ -522,11 +524,12 @@ def thermosteric_hgt_anom(row, testbit=False):
 
     specvol_standard = gsw.density.specvol(S_Ar,T_Cr,pressure)
 
-    row['specvol_thermo_anom'] = gsw.density.specvol(S_Ar,temp_cons,pressure) - specvol_standard
+    specvol_thermo_anom = gsw.density.specvol(S_Ar,temp_cons,pressure) - specvol_standard
     if testbit:
-        return row['specvol_thermo_anom']
+        return specvol_thermo_anom
+
     pressurecomb = integration_comb([pressure[0], pressure[-1]])
-    thacomb, _ = interpolate_to_levels(row, 'specvol_thermo_anom', pressurecomb)
+    thacomb, _ = interpolate_to_levels({'pressure': pressure, 'specvol_thermo_anom': specvol_thermo_anom, 'flag': row['flag']}, 'specvol_thermo_anom', pressurecomb)
     thacomb = thacomb/g
     pressurecomb = numpy.array([x*10000 for x in pressurecomb])
 
@@ -559,11 +562,12 @@ def halosteric_hgt_anom(row, testbit=False):
 
     specvol_standard = gsw.density.specvol(S_Ar,T_Cr,pressure)
 
-    row['specvol_halo_anom'] = gsw.density.specvol(sal_abs,T_Cr,pressure) - specvol_standard
+    specvol_halo_anom = gsw.density.specvol(sal_abs,T_Cr,pressure) - specvol_standard
     if testbit:
-        return row['specvol_halo_anom']
+        return specvol_halo_anom
+
     pressurecomb = integration_comb([pressure[0], pressure[-1]])
-    hhacomb, _ = interpolate_to_levels(row, 'specvol_halo_anom', pressurecomb)
+    hhacomb, _ = interpolate_to_levels({'pressure': pressure, 'specvol_halo_anom': specvol_halo_anom, 'flag': row['flag']}, 'specvol_halo_anom', pressurecomb)
     hhacomb = hhacomb/g
     pressurecomb = numpy.array([x*10000 for x in pressurecomb])
 
