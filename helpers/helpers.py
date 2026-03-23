@@ -244,6 +244,7 @@ def integration_comb(region, spacing=0.2):
 
     pressure = []
     low_roi, high_roi = region
+    print(low_roi, high_roi, spacing)
     pressure.extend(numpy.arange(low_roi, high_roi+spacing, spacing))
 
     return numpy.round(pressure, 6)
@@ -363,6 +364,17 @@ def safe_open_dataset(fn):
 
         return xar
 
+def all_present(*arrays):
+    # arrays: list of lists representing level data
+    # filter off any level that is undefined for any variable
+    levels = list(zip(*arrays))
+    levels = [x for x in levels if numpy.all(~numpy.isnan(x))]
+    vectors = [list(x) for x in list(zip(*levels))]
+    if len(vectors) == 0:
+        return [[]]*len(arrays)
+    else:
+        return vectors
+
 def steric_hgt_anom(row, testbit=False):
     # calculate the steric sea height anomaly based on the methodology of https://ecco-v4-python-tutorial.readthedocs.io/Steric_height.html
     # row must have temperature, salinity and pressure all available.
@@ -379,12 +391,20 @@ def steric_hgt_anom(row, testbit=False):
         temp_cons = numpy.array(row['conservative_temperature'])
     else:
         temp_cons = gsw.conversions.CT_from_t(sal_abs, row['temperature'], row['pressure'])
+
+    # cleaning - only consider levels where all necessary variables are nonnan (no, QC does not cover this)
+    print(row)
+    pressure, temp_cons, sal_abs = all_present(row['pressure'],temp_cons,sal_abs)
+    if len(pressure) == 0 or len(sal_abs) == 0 or len(temp_cons) == 0:
+        return [None]
+
     dens = gsw.density.rho(sal_abs, temp_cons, row['pressure'])
     specvol_standard = gsw.density.specvol(S_Ar,T_Cr,row['pressure'])
 
     row['specvol_anom'] = 1/dens - specvol_standard
     if testbit:
         return row['specvol_anom']
+
     pressurecomb = integration_comb([row['pressure'][0], row['pressure'][-1]])
     sshacomb, _ = interpolate_to_levels(row, 'specvol_anom', pressurecomb)
     sshacomb = sshacomb/g
@@ -392,7 +412,10 @@ def steric_hgt_anom(row, testbit=False):
 
     # integrate until we get to 2000 dbar, or the end of the profile if it doesn't go that deep
     x = pressurecomb < 20000000
-    cut_idx = list(x).index(False)
+    try:
+        cut_idx = list(x).index(False)
+    except:
+        cut_idx = len(list(x))
 
     steric_hgt_anom = scipy.integrate.trapezoid(sshacomb[0:cut_idx], x=pressurecomb[0:cut_idx])
 
@@ -413,6 +436,12 @@ def thermosteric_hgt_anom_linear(row, testbit=False):
         temp_cons = numpy.array(row['conservative_temperature'])
     else:
         temp_cons = gsw.conversions.CT_from_t(sal_abs, row['temperature'], row['pressure'])
+
+    # cleaning - only consider levels where all necessary variables are nonnan (no, QC does not cover this)
+    pressure, temp_cons, sal_abs = all_present(row['pressure'],temp_cons,sal_abs)
+    if len(pressure) == 0 or len(sal_abs) == 0 or len(temp_cons) == 0:
+        return [None]
+
     specvol_standard = gsw.density.specvol(S_Ar,T_Cr,row['pressure'])
     alpha = gsw.density.alpha(S_Ar,T_Cr,row['pressure'])
 
@@ -426,7 +455,10 @@ def thermosteric_hgt_anom_linear(row, testbit=False):
 
     # integrate until we get to 2000 dbar, or the end of the profile if it doesn't go that deep
     x = pressurecomb < 20000000
-    cut_idx = list(x).index(False)
+    try:
+        cut_idx = list(x).index(False)
+    except:
+        cut_idx = len(list(x))
     thermosteric_hgt_anom_linear = scipy.integrate.trapezoid(thalcomb[0:cut_idx], x=pressurecomb[0:cut_idx])
 
     return [thermosteric_hgt_anom_linear]
@@ -442,6 +474,12 @@ def halosteric_hgt_anom_linear(row, testbit=False):
         sal_abs = numpy.array(row['absolute_salinity'])
     else:
         sal_abs = gsw.conversions.SA_from_SP(row['salinity'], row['pressure'], row['longitude'], row['latitude'])
+
+    # cleaning - only consider levels where all necessary variables are nonnan (no, QC does not cover this)
+    pressure, sal_abs = all_present(row['pressure'],sal_abs)
+    if len(pressure) == 0 or len(sal_abs) == 0:
+        return [None]
+
     specvol_standard = gsw.density.specvol(S_Ar,T_Cr,row['pressure'])
     beta = gsw.density.beta(S_Ar,T_Cr,row['pressure'])
 
@@ -455,7 +493,10 @@ def halosteric_hgt_anom_linear(row, testbit=False):
 
     # integrate until we get to 2000 dbar, or the end of the profile if it doesn't go that deep
     x = pressurecomb < 20000000
-    cut_idx = list(x).index(False)
+    try:
+        cut_idx = list(x).index(False)
+    except:
+        cut_idx = len(list(x))
     halosteric_hgt_anom_linear = scipy.integrate.trapezoid(hhalcomb[0:cut_idx], x=pressurecomb[0:cut_idx])
 
     return [halosteric_hgt_anom_linear]
@@ -475,6 +516,12 @@ def thermosteric_hgt_anom(row, testbit=False):
         temp_cons = numpy.array(row['conservative_temperature'])
     else:
         temp_cons = gsw.conversions.CT_from_t(sal_abs, row['temperature'], row['pressure'])
+
+    # cleaning - only consider levels where all necessary variables are nonnan (no, QC does not cover this)
+    pressure, temp_cons, sal_abs = all_present(row['pressure'],temp_cons,sal_abs)
+    if len(pressure) == 0 or len(sal_abs) == 0 or len(temp_cons) == 0:
+        return [None]
+
     specvol_standard = gsw.density.specvol(S_Ar,T_Cr,row['pressure'])
 
     row['specvol_thermo_anom'] = gsw.density.specvol(S_Ar,temp_cons,row['pressure']) - specvol_standard
@@ -487,7 +534,10 @@ def thermosteric_hgt_anom(row, testbit=False):
 
     # integrate until we get to 2000 dbar, or the end of the profile if it doesn't go that deep
     x = pressurecomb < 20000000
-    cut_idx = list(x).index(False)
+    try:
+        cut_idx = list(x).index(False)
+    except:
+        cut_idx = len(list(x))
     thermosteric_hgt_anom = scipy.integrate.trapezoid(thacomb[0:cut_idx], x=pressurecomb[0:cut_idx])
 
     return [thermosteric_hgt_anom]
@@ -503,6 +553,12 @@ def halosteric_hgt_anom(row, testbit=False):
         sal_abs = numpy.array(row['absolute_salinity'])
     else:
         sal_abs = gsw.conversions.SA_from_SP(row['salinity'], row['pressure'], row['longitude'], row['latitude'])
+
+    # cleaning - only consider levels where all necessary variables are nonnan (no, QC does not cover this)
+    pressure, sal_abs = all_present(row['pressure'],sal_abs)
+    if len(pressure) == 0 or len(sal_abs) == 0:
+        return [None]
+
     specvol_standard = gsw.density.specvol(S_Ar,T_Cr,row['pressure'])
 
     row['specvol_halo_anom'] = gsw.density.specvol(sal_abs,T_Cr,row['pressure']) - specvol_standard
@@ -515,7 +571,10 @@ def halosteric_hgt_anom(row, testbit=False):
 
     # integrate until we get to 2000 dbar, or the end of the profile if it doesn't go that deep
     x = pressurecomb < 20000000
-    cut_idx = list(x).index(False)
+    try:
+        cut_idx = list(x).index(False)
+    except:
+        cut_idx = len(list(x))
     halosteric_hgt_anom = scipy.integrate.trapezoid(hhacomb[0:cut_idx], x=pressurecomb[0:cut_idx])
 
     return [halosteric_hgt_anom]
