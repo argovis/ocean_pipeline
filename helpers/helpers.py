@@ -436,7 +436,7 @@ def thermosteric_hgt_anom_linear(row, testbit=False):
         temp_cons = gsw.conversions.CT_from_t(sal_abs, row['temperature'], row['pressure'])
 
     # cleaning - only consider levels where all necessary variables are nonnan (no, QC does not cover this)
-    pressure, temp_cons, sal_abs = all_present(pressure,temp_cons,sal_abs)
+    pressure, temp_cons, sal_abs = all_present(row['pressure'],temp_cons,sal_abs)
     if len(pressure) == 0 or len(sal_abs) == 0 or len(temp_cons) == 0:
         return [None]
 
