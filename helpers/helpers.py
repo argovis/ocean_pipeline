@@ -374,51 +374,46 @@ def all_present(*arrays):
     else:
         return vectors
 
-def steric_hgt_anom(row, testbit=False):
+def steric_hgt_anom(row, pressure_range):
     # calculate the steric sea height anomaly based on the methodology of https://ecco-v4-python-tutorial.readthedocs.io/Steric_height.html
     # row must have temperature, salinity and pressure all available.
     # set testbit to return the pre-integration profile to check against the ECCO tutorial
+    # pressure_range: dbar pressures to integrate over
 
+    # constants
     S_Ar = 35.16504
     T_Cr = 0.
     g = 9.81
-    if 'absolute_salinity' in row:
-        sal_abs = numpy.array(row['absolute_salinity'])
-    else:
-        sal_abs = gsw.conversions.SA_from_SP(row['salinity'], row['pressure'], row['longitude'], row['latitude'])
-    if 'conservative_temperature' in row:
-        temp_cons = numpy.array(row['conservative_temperature'])
-    else:
-        temp_cons = gsw.conversions.CT_from_t(sal_abs, row['temperature'], row['pressure'])
 
-    # cleaning - only consider levels where all necessary variables are nonnan (no, QC does not cover this) and pressure is something basically civilized
-    pressure, temp_cons, sal_abs = all_present(row['pressure'],temp_cons,sal_abs)
-    if len(pressure) < 2 or not all(pressure[i] < pressure[i + 1] for i in range(len(pressure) - 1)) or len(sal_abs) == 0 or len(temp_cons) == 0:
+    # physical varibles interpolated to an appropriate comb for integration
+    ## cleaning - pressure needs to cover full range
+    if row['pressure'][0] > pressure_range[0] or row['pressure'][-1] < pressure_range[1]:
         return [None]
+    ## gsw vars at insitu levels
+    if not 'absolute_salinity' in row:
+        row['absolute_salinity'] = gsw.conversions.SA_from_SP(row['salinity'], row['pressure'], row['longitude'], row['latitude'])
+    if not 'conservative_temperature' in row:
+        row['conservative_temperature'] = gsw.conversions.CT_from_t(row['absolute_salinity'], row['temperature'], row['pressure'])
+    ## form an interpolated integration comb for the physical variables
+    pressure_comb = integration_comb(pressure_range, spacing=0.2)
+    SA_comb, _ = interpolate_to_levels(row, 'absolute_salinity', pressure_comb)
+    CT_comb, _ = interpolate_to_levels(row, 'conservative_temperature', pressure_comb)
 
-    dens = gsw.density.rho(sal_abs, temp_cons, pressure)
-    specvol_standard = gsw.density.specvol(S_Ar,T_Cr,pressure)
-
+    # compute the specific volume estimator to be integrated
+    dens = gsw.density.rho(SA_comb, CT_comb, pressure_comb)
+    specvol_standard = gsw.density.specvol(S_Ar,T_Cr,pressure_comb)
     specvol_anom = 1/dens - specvol_standard
-    if testbit:
-        return specvol_anom
 
-    pressurecomb = integration_comb([pressure[0], pressure[-1]])
-    print(pressure, pressurecomb)
-    sshacomb, _ = interpolate_to_levels({'pressure': pressure, 'specvol_anom': specvol_anom, 'flag': row['flag']}, 'specvol_anom', pressurecomb)
-    sshacomb = sshacomb/g
-    pressurecomb = numpy.array([10000*x for x in pressurecomb]) # must integrate in Pa
+    # integrate
+    pressure_comb = numpy.array([10000*x for x in pressure_comb]) # must integrate in Pa
+    steric_hgt_anom = scipy.integrate.trapezoid(specvol_anom/g, x=pressure_comb)
 
-    # integrate until we get to 2000 dbar, or the end of the profile if it doesn't go that deep
-    x = pressurecomb < 20000000
-    try:
-        cut_idx = list(x).index(False)
-    except:
-        cut_idx = len(list(x))
-
-    steric_hgt_anom = scipy.integrate.trapezoid(sshacomb[0:cut_idx], x=pressurecomb[0:cut_idx])
-
-    return [steric_hgt_anom]
+    # give me a number or give me None
+    if math.isnan(steric_hgt_anom):
+        print('steric_hgt_anom failed:', row, pressure_range)
+        return [None]
+    else:
+        return [steric_hgt_anom]
 
 def thermosteric_hgt_anom_linear(row, testbit=False):
     # calculate the thermosteric sea height anomaly term based on the linear expansion methodology of https://ecco-v4-python-tutorial.readthedocs.io/Steric_height.html
