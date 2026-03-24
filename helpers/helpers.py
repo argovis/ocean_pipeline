@@ -395,6 +395,8 @@ def steric_hgt_anom(row, pressure_range):
         row['conservative_temperature'] = gsw.conversions.CT_from_t(row['absolute_salinity'], row['temperature'], row['pressure'])
     ## form an interpolated integration comb for the physical variables
     row['pressure'],row['conservative_temperature'], row['absolute_salinity'] = all_present(row['pressure'],row['conservative_temperature'], row['absolute_salinity'])
+    if numpy.shape((row['pressure'])) == ()
+        return [None] # some deeply pathological cases will end up with only a single level at this point
     pressure_comb = integration_comb(pressure_range, spacing=0.2)
     SA_comb, _ = interpolate_to_levels(row, 'absolute_salinity', pressure_comb)
     CT_comb, _ = interpolate_to_levels(row, 'conservative_temperature', pressure_comb)
