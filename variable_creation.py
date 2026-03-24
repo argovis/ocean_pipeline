@@ -130,7 +130,7 @@ if len(df) > 0:
                 "halosteric_hgt_anom": 64
             }
             df[var] = df.apply(
-                lambda row: estimators[var](row),
+                lambda row: estimators[var](row, args.pressure_range),
 	        axis=1
             )
 

@@ -387,7 +387,7 @@ def steric_hgt_anom(row, pressure_range):
 
     # physical varibles interpolated to an appropriate comb for integration
     ## cleaning - pressure needs to cover full range
-    if row['pressure'][0] > pressure_range[0] or row['pressure'][-1] < pressure_range[1]:
+    if len(row['pressure']) == 0 or row['pressure'][0] > pressure_range[0] or row['pressure'][-1] < pressure_range[1]:
         return [None]
     ## gsw vars at insitu levels
     if not 'absolute_salinity' in row:
