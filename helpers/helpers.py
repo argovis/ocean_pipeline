@@ -374,48 +374,37 @@ def all_present(*arrays):
     else:
         return vectors
 
-def steric_hgt_anom(row, pressure_range):
+def ecco_specific_volume_anomaly(row):
     # calculate the steric sea height anomaly based on the methodology of https://ecco-v4-python-tutorial.readthedocs.io/Steric_height.html
     # row must have temperature, salinity and pressure all available.
-    # pressure_range: dbar pressures to integrate over
 
     # constants
     S_Ar = 35.16504
     T_Cr = 0.
-    g = 9.81
 
-    # physical varibles interpolated to an appropriate comb for integration
-    ## cleaning - pressure needs to cover full range
-    if len(row['pressure']) == 0 or row['pressure'][0] > pressure_range[0] or row['pressure'][-1] < pressure_range[1]:
-        return [None]
-    ## gsw vars at insitu levels
+    # physical varibles
     if not 'absolute_salinity' in row:
         row['absolute_salinity'] = gsw.conversions.SA_from_SP(row['salinity'], row['pressure'], row['longitude'], row['latitude'])
     if not 'conservative_temperature' in row:
         row['conservative_temperature'] = gsw.conversions.CT_from_t(row['absolute_salinity'], row['temperature'], row['pressure'])
-    ## form an interpolated integration comb for the physical variables
-    row['pressure'],row['conservative_temperature'], row['absolute_salinity'] = all_present(row['pressure'],row['conservative_temperature'], row['absolute_salinity'])
-    if numpy.shape((row['pressure'])) == ():
-        return [None] # some deeply pathological cases will end up with only a single level at this point
-    pressure_comb = integration_comb(pressure_range, spacing=0.2)
-    SA_comb, _ = interpolate_to_levels(row, 'absolute_salinity', pressure_comb)
-    CT_comb, _ = interpolate_to_levels(row, 'conservative_temperature', pressure_comb)
-
+    
     # compute the specific volume estimator to be integrated
-    dens = gsw.density.rho(SA_comb, CT_comb, pressure_comb)
+    dens = gsw.density.rho(row['absolute_salinity'], row['conservative_temperature'], row['presure'])
     specvol_standard = gsw.density.specvol(S_Ar,T_Cr,pressure_comb)
     specvol_anom = 1/dens - specvol_standard
 
-    # integrate
-    pressure_comb = numpy.array([10000*x for x in pressure_comb]) # must integrate in Pa
-    steric_hgt_anom = scipy.integrate.trapezoid(specvol_anom/g, x=pressure_comb)
+    return specvol_anom
 
-    # give me a number or give me None
-    if math.isnan(steric_hgt_anom):
-        print('steric_hgt_anom failed:', row, pressure_range)
-        return [None]
-    else:
-        return [steric_hgt_anom]
+    # # integrate
+    # pressure_comb = numpy.array([10000*x for x in pressure_comb]) # must integrate in Pa
+    # steric_hgt_anom = scipy.integrate.trapezoid(specvol_anom/g, x=pressure_comb)
+
+    # # give me a number or give me None
+    # if math.isnan(steric_hgt_anom):
+    #     print('steric_hgt_anom failed:', row, pressure_range)
+    #     return [None]
+    # else:
+    #     return [steric_hgt_anom]
 
 def thermosteric_hgt_anom_linear(row, pressure_range):
     # calculate the thermosteric sea height anomaly term based on the linear expansion methodology of https://ecco-v4-python-tutorial.readthedocs.io/Steric_height.html
@@ -438,6 +427,8 @@ def thermosteric_hgt_anom_linear(row, pressure_range):
         row['conservative_temperature'] = gsw.conversions.CT_from_t(row['absolute_salinity'], row['temperature'], row['pressure'])
     ## form an interpolated integration comb for the physical variables
     row['pressure'],row['conservative_temperature'], row['absolute_salinity'] = all_present(row['pressure'],row['conservative_temperature'], row['absolute_salinity'])
+    if numpy.shape((row['pressure'])) == ():
+        return [None] # some deeply pathological cases will end up with only a single level at this point
     pressure_comb = integration_comb(pressure_range, spacing=0.2)
     SA_comb, _ = interpolate_to_levels(row, 'absolute_salinity', pressure_comb)
     CT_comb, _ = interpolate_to_levels(row, 'conservative_temperature', pressure_comb)
@@ -477,6 +468,8 @@ def halosteric_hgt_anom_linear(row, pressure_range):
         row['absolute_salinity'] = gsw.conversions.SA_from_SP(row['salinity'], row['pressure'], row['longitude'], row['latitude'])
     ## form an interpolated integration comb for the physical variables
     row['pressure'], row['absolute_salinity'] = all_present(row['pressure'], row['absolute_salinity'])
+    if numpy.shape((row['pressure'])) == ():
+        return [None] # some deeply pathological cases will end up with only a single level at this point
     pressure_comb = integration_comb(pressure_range, spacing=0.2)
     SA_comb, _ = interpolate_to_levels(row, 'absolute_salinity', pressure_comb)
 
@@ -517,6 +510,8 @@ def thermosteric_hgt_anom(row, pressure_range):
         row['conservative_temperature'] = gsw.conversions.CT_from_t(row['absolute_salinity'], row['temperature'], row['pressure'])
     ## form an interpolated integration comb for the physical variables
     row['pressure'],row['conservative_temperature'], row['absolute_salinity'] = all_present(row['pressure'],row['conservative_temperature'], row['absolute_salinity'])
+    if numpy.shape((row['pressure'])) == ():
+        return [None] # some deeply pathological cases will end up with only a single level at this point
     pressure_comb = integration_comb(pressure_range, spacing=0.2)
     SA_comb, _ = interpolate_to_levels(row, 'absolute_salinity', pressure_comb)
     CT_comb, _ = interpolate_to_levels(row, 'conservative_temperature', pressure_comb)
@@ -555,6 +550,8 @@ def halosteric_hgt_anom(row, pressure_range):
         row['absolute_salinity'] = gsw.conversions.SA_from_SP(row['salinity'], row['pressure'], row['longitude'], row['latitude'])
     ## form an interpolated integration comb for the physical variables
     row['pressure'], row['absolute_salinity'] = all_present(row['pressure'], row['absolute_salinity'])
+    if numpy.shape((row['pressure'])) == ():
+        return [None] # some deeply pathological cases will end up with only a single level at this point
     pressure_comb = integration_comb(pressure_range, spacing=0.2)
     SA_comb, _ = interpolate_to_levels(row, 'absolute_salinity', pressure_comb)
 
