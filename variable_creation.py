@@ -19,6 +19,8 @@ parser.add_argument("--level", type=float, help="if mode is interpolate, the pre
 
 args = parser.parse_args()
 
+# could consider some if this then that enforcement for argument defs; for now just let it blow up when used incorrectly
+
 df = pandas.read_parquet(args.input_file, engine='pyarrow')
 rejects = pandas.DataFrame(columns=['float', 'cycle', 'longitude', 'latitude', 'juld', 'flag'])
 
@@ -80,7 +82,7 @@ if len(df) > 0:
     for var in dv:
         if var == 'mld' and 'mld' not in df.columns:
             df[['mld', 'flag']] = df.apply(
-                lambda row: pandas.Series(helpers.mld_estimator(row)), # KM make sure implmentation is returning flags sensibly here and for all such helpers
+                lambda row: pandas.Series(helpers.mld_estimator(row)), 
 	            axis=1
             )
 
@@ -92,31 +94,31 @@ if len(df) > 0:
 
         if var == 'steric_hgt_anom' and 'steric_hgt_anom' not in df.columns:
             df[['steric_hgt_anom', 'flag']] = df.apply(
-                lambda row: pandas.Series(helpers.steric_hgt_anom(row, args.pressure_range, args.integration_mode)), # KM implement
+                lambda row: pandas.Series(helpers.steric_hgt_anom(row, args.pressure_range, args.integration_mode)),
                 axis=1
             )
 
         if var == 'thermosteric_hgt_anom_linear' and 'thermosteric_hgt_anom_linear' not in df.columns:
             df[['thermosteric_hgt_anom_linear', 'flag']] = df.apply(
-                lambda row: pandas.Series(helpers.thermosteric_hgt_anom_linear(row, args.pressure_range, args.integration_mode)), # KM to implement
+                lambda row: pandas.Series(helpers.thermosteric_hgt_anom_linear(row, args.pressure_range, args.integration_mode)),
                 axis=1
             )
 
         if var == 'halosteric_hgt_anom_linear' and 'halosteric_hgt_anom_linear' not in df.columns:
             df[['halosteric_hgt_anom_linear', 'flag']] = df.apply(
-                lambda row: pandas.Series(helpers.halosteric_hgt_anom_linear(row, args.pressure_range, args.integration_mode)), # KM to implement
+                lambda row: pandas.Series(helpers.halosteric_hgt_anom_linear(row, args.pressure_range, args.integration_mode)),
                 axis=1
             )
 
         if var == 'thermosteric_hgt_anom' and 'thermosteric_hgt_anom' not in df.columns:
             df[['thermosteric_hgt_anom', 'flag']] = df.apply(
-                lambda row: pandas.Series(helpers.thermosteric_hgt_anom(row, args.pressure_range, args.integration_mode)), # KM to implement
+                lambda row: pandas.Series(helpers.thermosteric_hgt_anom(row, args.pressure_range, args.integration_mode)),
                 axis=1
             )
 
         if var == 'halosteric_hgt_anom' and 'halosteric_hgt_anom' not in df.columns:
             df[['halosteric_hgt_anom', 'flag']] = df.apply(
-                lambda row: pandas.Series(helpers.halosteric_hgt_anom(row, args.pressure_range, args.integration_mode)), # KM to implement
+                lambda row: pandas.Series(helpers.halosteric_hgt_anom(row, args.pressure_range, args.integration_mode)),
                 axis=1
             )
 
@@ -125,19 +127,19 @@ if len(df) > 0:
         if args.integration_mode is not None:
             if args.integration_mode == 'trapezoidal':
                 df[[var, 'flag']] = df.apply(
-                    lambda row: pandas.Series(helpers.trapezoidal_integration(row, var, args.pressure_range)), # KM to implement
+                    lambda row: pandas.Series(helpers.trapezoidal_integration(row, var, args.pressure_range)),
                     axis=1
                 )
             elif args.integration_mode == 'dz':
                 df[[var, 'flag']] = df.apply(
-                    lambda row: pandas.Series(helpers.dz_integration(row, var)), # KM to implement
+                    lambda row: pandas.Series(helpers.dz_integration(row, var)),
                     axis=1
                 )
             else:
                 raise ValueError("integration mode not recognized")
         elif args.interpolate is not None:
             df[[var, 'flag']] = df.apply(
-                lambda row: pandas.Series(helpers.interpolate_to_level(row, var, args.level)), # KM to implement
+                lambda row: pandas.Series(helpers.interpolate_to_levels(row, var, [args.level])),
                 axis=1
             )
 

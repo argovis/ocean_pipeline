@@ -7,6 +7,14 @@
 # 32: pressure had NaNs / Nones
 # 64: couldn't extrapolate to bounds of desired range
 # 128: interpolated levels were masked for being too far from a neighbor
+# 256: unimplemented codepath
+# 512: mld estimator failed
+# 1024: dynamic height anomaly estimator failed
+# 2048: ECCO steric height anomaly estimator failed
+# 4096: ECCO thermosteric_hgt_anom_linear estimator failed
+# 8192: ECCO halosteric_hgt_anom_linear estimator failed
+# 16384: ECCO thermosteric_hgt_anom estimator failed
+# 32768: ECCO halosteric_hgt_anom estimator failed
 
 import numpy, datetime, scipy.interpolate, scipy.integrate, math, operator, juliandate, bisect, warnings, xarray, gsw
 
@@ -181,15 +189,6 @@ def interpolate_to_levels(row, var, levels, pressure_buffer=-1, pressure_index_b
 
         return interp, flag
 
-def integrate_roi(pressure, variable, low_roi, high_roi):
-    # trapezoidal integration of <variable> over <pressure> from <low_roi> to <high_roi>.
-    # will error out if <low_roi> and/or <high_roi> are not found in <pressure>.
-    # will return nan if any nans in pressure or variable
-
-    low_i = int(numpy.where(pressure == low_roi)[0][0])
-    high_i = int(numpy.where(pressure == high_roi)[0][0])
-    return scipy.integrate.trapezoid(variable[low_i:high_i+1], x=pressure[low_i:high_i+1])
-
 def filterQCandPressure(t,s,p, t_qc,s_qc,p_qc, pressure_qc, temperature_qc, salinity_qc, pressure):
     # keep only levels where p, t and psal have qc flags found in <pressure_qc>, <temperature_qc>, and <salinity_qc> respectively, and pressure is below <pressure>.
     data = list(zip(t,s,p,t_qc,s_qc,p_qc))
@@ -232,12 +231,33 @@ def mask_far_interps(measured_pressures, interp_levels, interp_values):
 
     return interp_values, flag
 
-def integration_region(region, pressure, variable):
-    # perform intrgation of <variable> over <pressure> for a list of <regions> specified as tuples of (low_roi, high_roi)
-    low_roi, high_roi = region
-    integrals = integrate_roi(pressure, variable, low_roi, high_roi)
+def trapezoidal_integration(row, var, pressure_range, interpolate_spacing=0.2):
+    # perform a trapezoidal integral of the 1D float vector row[var] with pressure on the x axis,
+    # from pressure_range[0] to pressure_range[1].
+    # if interpolate_spacing > 0, will pchip interpolate to a comb before integration
+    # note that not interpolating may result in pressure_range not falling on extant values,
+    # in which case the integration region will be narrower than the requested range.
 
-    return [integrals]
+    flag = 0
+
+    if interpolate_spacing > 0:
+        levels = integration_comb(pressure_range, interpolate_spacing)
+        interp_var, f = interpolate_to_levels(row, var, levels)
+        flag = flag | f
+        return scipy.integrate.trapezoid(interp_var, x=levels), flag
+    else:
+        low_i = -1
+        high_i = -1
+        for i, lvl in enumerate(row['pressure']):
+            if lvl<pressure_range[0]:
+                low_i = i
+            elif lvl<pressure_range[1]:
+                high_i = i
+        low_i += 1
+        if low_i == -1 or high_i == -1 or low_i >= high_i:
+            return [None], flag | 64 # bit of a stretch of this flag but hopefully context will clarify
+        else:
+            return scipy.integrate.trapezoid(variable[low_i:high_i+1], x=pressure[low_i:high_i+1]), flag
 
 def integration_comb(region, spacing=0.2):
     # generates a level spectrum with <spacing> levels populating the <region>
@@ -247,6 +267,9 @@ def integration_comb(region, spacing=0.2):
     pressure.extend(numpy.arange(low_roi, high_roi+spacing, spacing))
 
     return numpy.round(pressure, 6)
+
+def dz_integration(row, var):
+    return [None], 256 # unimplemented
 
 def choose_profile(group):
     # prefer the highest resolution profile as calculated over the depth range covered by all profiles in the group
@@ -276,20 +299,24 @@ def merge_qc(qc_lists):
     else:
         return []
 
-def mld_estimator(row):
+def mld_estimator(row, errorflag=512):
     # estimate the mixed layer depth for this profile
     # row['potential_density'] == gsw potential density from which to estimate MLD threshold
 
     reference_depth = 10
     reference_density = interpolate_to_levels(row, 'potential_density', [reference_depth])[0][0]
     if numpy.isnan(reference_density):
-        return [None]
+        return [None], errorflag
     threshold_density = reference_density + 0.03
 
     # go fishing for the depth that corresponds to the threshold
-    return [pchip_search(threshold_density, 0, 1000, 1, row, 'potential_density')]
+    mld = pchip_search(threshold_density, 0, 1000, 1, row, 'potential_density')
+    if mld is None:
+        return [None], 256
+    else:
+        return [mld], 0
 
-def dha(row, pressure_range):
+def dha(row, pressure_range, errorflag=1024):
     # calculate the dynamic height anomaly for this profile,
     # integrated from pressure_range[0] to the reference pressure pressure_range[1]
     # row must have absolute_salinity, conservative_temperature and pressure all available.
@@ -302,10 +329,9 @@ def dha(row, pressure_range):
     dynamic_height_anom = gsw.geostrophy.geo_strf_dyn_height(SA_comb, CT_comb, pressure_comb, p_ref=pressure_range[1])[0] #ie we want the integral from the start of the pressure range, which corresponds to the first pressure in the comb
     # give me a number or give me None
     if math.isnan(dynamic_height_anom):
-        print('DHA failed:', row, pressure_range)
-        return [None]
+        return [None], errorflag
     else:
-        return [dynamic_height_anom]
+        return [dynamic_height_anom], 0
 
 
 def pchip_search(target, init_min, init_max, init_step, row, variable):
@@ -374,13 +400,17 @@ def all_present(*arrays):
     else:
         return vectors
 
-def ecco_specific_volume_anomaly(row):
+def steric_hgt_anom(row, pressure_range, integration_mode, errorflag=2048):
     # calculate the steric sea height anomaly based on the methodology of https://ecco-v4-python-tutorial.readthedocs.io/Steric_height.html
-    # row must have temperature, salinity and pressure all available.
+    # pressure_range: [min, max] pressure in dbar to integrate over for integration_mode=='trapezoidal'
+    # integration_mode: 'trapezoidal' only (other modes forthcoming).
+
+    flag = 0
 
     # constants
     S_Ar = 35.16504
     T_Cr = 0.
+    g = 9.81
 
     # physical varibles
     if not 'absolute_salinity' in row:
@@ -388,184 +418,194 @@ def ecco_specific_volume_anomaly(row):
     if not 'conservative_temperature' in row:
         row['conservative_temperature'] = gsw.conversions.CT_from_t(row['absolute_salinity'], row['temperature'], row['pressure'])
     
+    # preinterpolation
+    combspace = 0.2
+    levels = integration_comb(pressure_range, spacing=0.2)
+    absolute_salinity, f = interpolate_to_levels(row, 'absolute_salinity', levels)
+    flag = flag | f
+    conservative_temperature, f = interpolate_to_levels(row, 'conservative_temperature', levels)
+    flag = flag | f
+
     # compute the specific volume estimator to be integrated
-    dens = gsw.density.rho(row['absolute_salinity'], row['conservative_temperature'], row['presure'])
-    specvol_standard = gsw.density.specvol(S_Ar,T_Cr,pressure_comb)
+    dens = gsw.density.rho(absolute_salinity, conservative_temperature, levels)
+    specvol_standard = gsw.density.specvol(S_Ar,T_Cr,levels)
     specvol_anom = 1/dens - specvol_standard
 
-    return specvol_anom
+    # integrate
+    if integration_mode == 'trapezoidal':
+        levels = numpy.array([10000*x for x in levels]) # must integrate in Pa
+        steric_hgt_anom = scipy.integrate.trapezoid(specvol_anom/g, x=levels)
+    else:
+        return [None], flag | 256 # unimplemented
 
-    # # integrate
-    # pressure_comb = numpy.array([10000*x for x in pressure_comb]) # must integrate in Pa
-    # steric_hgt_anom = scipy.integrate.trapezoid(specvol_anom/g, x=pressure_comb)
+    # give me a number or give me None
+    if math.isnan(steric_hgt_anom):
+        return [None], flag | errorflag
+    else:
+        return [steric_hgt_anom], flag
 
-    # # give me a number or give me None
-    # if math.isnan(steric_hgt_anom):
-    #     print('steric_hgt_anom failed:', row, pressure_range)
-    #     return [None]
-    # else:
-    #     return [steric_hgt_anom]
-
-def thermosteric_hgt_anom_linear(row, pressure_range):
+def thermosteric_hgt_anom_linear(row, pressure_range, integration_mode, errorflag=4096):
     # calculate the thermosteric sea height anomaly term based on the linear expansion methodology of https://ecco-v4-python-tutorial.readthedocs.io/Steric_height.html
-    # row must have temperature, salinity and pressure all available.
-    # pressure_range: dbar pressures to integrate over
+    # pressure_range: [min, max] pressure in dbar to integrate over for integration_mode=='trapezoidal'
+    # integration_mode: 'trapezoidal' only (other modes forthcoming).
+
+    flag = 0
 
     # constants
     S_Ar = 35.16504
     T_Cr = 0.
     g = 9.81
 
-    # physical varibles interpolated to an appropriate comb for integration
-    ## cleaning - pressure needs to cover full range
-    if len(row['pressure']) == 0 or row['pressure'][0] > pressure_range[0] or row['pressure'][-1] < pressure_range[1]:
-        return [None]
-    ## gsw vars at insitu levels
+    # physical varibles
     if not 'absolute_salinity' in row:
         row['absolute_salinity'] = gsw.conversions.SA_from_SP(row['salinity'], row['pressure'], row['longitude'], row['latitude'])
     if not 'conservative_temperature' in row:
         row['conservative_temperature'] = gsw.conversions.CT_from_t(row['absolute_salinity'], row['temperature'], row['pressure'])
-    ## form an interpolated integration comb for the physical variables
-    row['pressure'],row['conservative_temperature'], row['absolute_salinity'] = all_present(row['pressure'],row['conservative_temperature'], row['absolute_salinity'])
-    if numpy.shape((row['pressure'])) == ():
-        return [None] # some deeply pathological cases will end up with only a single level at this point
-    pressure_comb = integration_comb(pressure_range, spacing=0.2)
-    SA_comb, _ = interpolate_to_levels(row, 'absolute_salinity', pressure_comb)
-    CT_comb, _ = interpolate_to_levels(row, 'conservative_temperature', pressure_comb)
+    
+    # preinterpolation
+    combspace = 0.2
+    levels = integration_comb(pressure_range, spacing=0.2)
+    absolute_salinity, f = interpolate_to_levels(row, 'absolute_salinity', levels)
+    flag = flag | f
+    conservative_temperature, f = interpolate_to_levels(row, 'conservative_temperature', levels)
+    flag = flag | f
 
     # compute the specific volume estimator to be integrated
-    specvol_standard = gsw.density.specvol(S_Ar,T_Cr,pressure_comb)
-    alpha = gsw.density.alpha(S_Ar,T_Cr,pressure_comb)
-    specvol_thermo_anom_linear = specvol_standard*alpha*(CT_comb - T_Cr)
+    specvol_standard = gsw.density.specvol(S_Ar,T_Cr,levels)
+    alpha = gsw.density.alpha(S_Ar,T_Cr,levels)
+    specvol_thermo_anom_linear = specvol_standard*alpha*(conservative_temperature - T_Cr)
 
     # integrate
-    pressure_comb = numpy.array([10000*x for x in pressure_comb]) # must integrate in Pa
-    thermosteric_hgt_anom_linear = scipy.integrate.trapezoid(specvol_thermo_anom_linear/g, x=pressure_comb)
+    if integration_mode == 'trapezoidal':
+        levels = numpy.array([10000*x for x in levels]) # must integrate in Pa
+        thermosteric_hgt_anom_linear = scipy.integrate.trapezoid(specvol_thermo_anom_linear/g, x=levels)
+    else:
+        return [None], flag | 256 # unimplemented
 
     # give me a number or give me None
     if math.isnan(thermosteric_hgt_anom_linear):
-        print('thermosteric_hgt_anom_linear failed:', row, pressure_range)
-        return [None]
+        return [None], flag | errorflag
     else:
-        return [thermosteric_hgt_anom_linear]
+        return [thermosteric_hgt_anom_linear], flag
 
-def halosteric_hgt_anom_linear(row, pressure_range):
+def halosteric_hgt_anom_linear(row, pressure_range, integration_mode, errorflag=8192):
     # calculate the halosteric sea height anomaly term based on the linear expansion methodology of https://ecco-v4-python-tutorial.readthedocs.io/Steric_height.html
-    # row must have temperature, salinity and pressure all available.
-    # pressure_range: dbar pressures to integrate over
+    # pressure_range: [min, max] pressure in dbar to integrate over for integration_mode=='trapezoidal'
+    # integration_mode: 'trapezoidal' only (other modes forthcoming).
+
+    flag = 0
 
     # constants
     S_Ar = 35.16504
     T_Cr = 0.
     g = 9.81
 
-    # physical varibles interpolated to an appropriate comb for integration
-    ## cleaning - pressure needs to cover full range
-    if len(row['pressure']) == 0 or row['pressure'][0] > pressure_range[0] or row['pressure'][-1] < pressure_range[1]:
-        return [None]
-    ## gsw vars at insitu levels
+    # physical varibles
     if not 'absolute_salinity' in row:
         row['absolute_salinity'] = gsw.conversions.SA_from_SP(row['salinity'], row['pressure'], row['longitude'], row['latitude'])
-    ## form an interpolated integration comb for the physical variables
-    row['pressure'], row['absolute_salinity'] = all_present(row['pressure'], row['absolute_salinity'])
-    if numpy.shape((row['pressure'])) == ():
-        return [None] # some deeply pathological cases will end up with only a single level at this point
-    pressure_comb = integration_comb(pressure_range, spacing=0.2)
-    SA_comb, _ = interpolate_to_levels(row, 'absolute_salinity', pressure_comb)
+
+    # preinterpolation
+    combspace = 0.2
+    levels = integration_comb(pressure_range, spacing=0.2)
+    absolute_salinity, f = interpolate_to_levels(row, 'absolute_salinity', levels)
+    flag = flag | f
 
     # compute the specific volume estimator to be integrated
-    specvol_standard = gsw.density.specvol(S_Ar,T_Cr,pressure_comb)
-    beta = gsw.density.beta(S_Ar,T_Cr,pressure_comb)
-    specvol_halo_anom_linear = -specvol_standard*beta*(SA_comb - S_Ar)
+    specvol_standard = gsw.density.specvol(S_Ar,T_Cr,levels)
+    beta = gsw.density.beta(S_Ar,T_Cr,levels)
+    specvol_halo_anom_linear = -specvol_standard*beta*(absolute_salinity - S_Ar)
 
     # integrate
-    pressure_comb = numpy.array([10000*x for x in pressure_comb]) # must integrate in Pa
-    halosteric_hgt_anom_linear = scipy.integrate.trapezoid(halosteric_hgt_anom_linear/g, x=pressure_comb)
+    if integration_mode == 'trapezoidal':
+        levels = numpy.array([10000*x for x in levels]) # must integrate in Pa
+        halosteric_hgt_anom_linear = scipy.integrate.trapezoid(specvol_halo_anom_linear/g, x=levels)
+    else:
+        return [None], flag | 256 # unimplemented
 
     # give me a number or give me None
     if math.isnan(halosteric_hgt_anom_linear):
-        print('halosteric_hgt_anom_linear failed:', row, pressure_range)
-        return [None]
+        return [None], flag | errorflag
     else:
-        return [halosteric_hgt_anom_linear]
+        return [halosteric_hgt_anom_linear], flag
 
-def thermosteric_hgt_anom(row, pressure_range):
+def thermosteric_hgt_anom(row, pressure_range, integration_mode, errorflag=16384):
     # calculate the thermosteric sea height anomaly term based on the change in specific volume methodology of https://ecco-v4-python-tutorial.readthedocs.io/Steric_height.html
-    # row must have temperature, salinity and pressure all available.
-    # pressure_range: dbar pressures to integrate over
+    # pressure_range: [min, max] pressure in dbar to integrate over for integration_mode=='trapezoidal'
+    # integration_mode: 'trapezoidal' only (other modes forthcoming).
+
+    flag = 0
 
     # constants
     S_Ar = 35.16504
     T_Cr = 0.
     g = 9.81
 
-    # physical varibles interpolated to an appropriate comb for integration
-    ## cleaning - pressure needs to cover full range
-    if len(row['pressure']) == 0 or row['pressure'][0] > pressure_range[0] or row['pressure'][-1] < pressure_range[1]:
-        return [None]
-    ## gsw vars at insitu levels
+    # physical varibles
     if not 'absolute_salinity' in row:
         row['absolute_salinity'] = gsw.conversions.SA_from_SP(row['salinity'], row['pressure'], row['longitude'], row['latitude'])
     if not 'conservative_temperature' in row:
         row['conservative_temperature'] = gsw.conversions.CT_from_t(row['absolute_salinity'], row['temperature'], row['pressure'])
-    ## form an interpolated integration comb for the physical variables
-    row['pressure'],row['conservative_temperature'], row['absolute_salinity'] = all_present(row['pressure'],row['conservative_temperature'], row['absolute_salinity'])
-    if numpy.shape((row['pressure'])) == ():
-        return [None] # some deeply pathological cases will end up with only a single level at this point
-    pressure_comb = integration_comb(pressure_range, spacing=0.2)
-    SA_comb, _ = interpolate_to_levels(row, 'absolute_salinity', pressure_comb)
-    CT_comb, _ = interpolate_to_levels(row, 'conservative_temperature', pressure_comb)
+    
+    # preinterpolation
+    combspace = 0.2
+    levels = integration_comb(pressure_range, spacing=0.2)
+    absolute_salinity, f = interpolate_to_levels(row, 'absolute_salinity', levels)
+    flag = flag | f
+    conservative_temperature, f = interpolate_to_levels(row, 'conservative_temperature', levels)
+    flag = flag | f
 
     # compute the specific volume estimator to be integrated
     specvol_standard = gsw.density.specvol(S_Ar,T_Cr,pressure_comb)
-    specvol_thermo_anom = gsw.density.specvol(S_Ar,temp_cons,pressure_comb) - specvol_standard
+    specvol_thermo_anom = gsw.density.specvol(S_Ar,conservative_temperature,levels) - specvol_standard
 
     # integrate
-    pressure_comb = numpy.array([10000*x for x in pressure_comb]) # must integrate in Pa
-    thermosteric_hgt_anom = scipy.integrate.trapezoid(thermosteric_hgt_anom/g, x=pressure_comb)
+    if integration_mode == 'trapezoidal':
+        levels = numpy.array([10000*x for x in levels]) # must integrate in Pa
+        thermosteric_hgt_anom = scipy.integrate.trapezoid(specvol_thermo_anom/g, x=levels)
+    else:
+        return [None], flag | 256 # unimplemented
 
     # give me a number or give me None
     if math.isnan(thermosteric_hgt_anom):
-        print('thermosteric_hgt_anom failed:', row, pressure_range)
-        return [None]
+        return [None], flag | errorflag
     else:
-        return [thermosteric_hgt_anom]
+        return [thermosteric_hgt_anom], flag
 
-def halosteric_hgt_anom(row, pressure_range):
+def halosteric_hgt_anom(row, pressure_range, integration_mode, errorflag=32768):
     # calculate the halosteric sea height anomaly term baed on the change in specific volume methodology of https://ecco-v4-python-tutorial.readthedocs.io/Steric_height.html
-    # row must have temperature, salinity and pressure all available.
-    # pressure_range: dbar pressures to integrate over
+    # pressure_range: [min, max] pressure in dbar to integrate over for integration_mode=='trapezoidal'
+    # integration_mode: 'trapezoidal' only (other modes forthcoming).
+
+    flag = 0
 
     # constants
     S_Ar = 35.16504
     T_Cr = 0.
     g = 9.81
 
-    # physical varibles interpolated to an appropriate comb for integration
-    ## cleaning - pressure needs to cover full range
-    if len(row['pressure']) == 0 or row['pressure'][0] > pressure_range[0] or row['pressure'][-1] < pressure_range[1]:
-        return [None]
-    ## gsw vars at insitu levels
+    # physical varibles
     if not 'absolute_salinity' in row:
         row['absolute_salinity'] = gsw.conversions.SA_from_SP(row['salinity'], row['pressure'], row['longitude'], row['latitude'])
-    ## form an interpolated integration comb for the physical variables
-    row['pressure'], row['absolute_salinity'] = all_present(row['pressure'], row['absolute_salinity'])
-    if numpy.shape((row['pressure'])) == ():
-        return [None] # some deeply pathological cases will end up with only a single level at this point
-    pressure_comb = integration_comb(pressure_range, spacing=0.2)
-    SA_comb, _ = interpolate_to_levels(row, 'absolute_salinity', pressure_comb)
+
+    # preinterpolation
+    combspace = 0.2
+    levels = integration_comb(pressure_range, spacing=0.2)
+    absolute_salinity, f = interpolate_to_levels(row, 'absolute_salinity', levels)
+    flag = flag | f
 
     # compute the specific volume estimator to be integrated
-    specvol_standard = gsw.density.specvol(S_Ar,T_Cr,pressure_comb)
-    specvol_halo_anom = gsw.density.specvol(sal_abs,T_Cr,pressure_comb) - specvol_standard
+    specvol_standard = gsw.density.specvol(S_Ar,T_Cr,levels)
+    specvol_halo_anom = gsw.density.specvol(absolute_salinity,T_Cr,levels) - specvol_standard
 
     # integrate
-    pressure_comb = numpy.array([10000*x for x in pressure_comb]) # must integrate in Pa
-    halosteric_hgt_anom = scipy.integrate.trapezoid(halosteric_hgt_anom/g, x=pressure_comb)
+    if integration_mode == 'trapezoidal':
+        levels = numpy.array([10000*x for x in levels]) # must integrate in Pa
+        halosteric_hgt_anom = scipy.integrate.trapezoid(specvol_halo_anom/g, x=levels)
+    else:
+        return [None], flag | 256 # unimplemented
 
     # give me a number or give me None
     if math.isnan(halosteric_hgt_anom):
-        print('halosteric_hgt_anom failed:', row, pressure_range)
-        return [None]
+        return [None], flag | errorflag
     else:
-        return [halosteric_hgt_anom]
+        return [halosteric_hgt_anom], flag
