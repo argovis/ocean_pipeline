@@ -110,7 +110,7 @@ def tidy_profile(pressure, var, flag):
     ## dependent variable must be defined
     mask = [0]*len(var)
     for i in range(len(var)):
-        if var[i] is None or math.isnan(var[i]):
+        if var[i] is None or not numpy.isfinite(var[i]):
             mask[i] = 1
             flag = flag | 4
     p = [pressure[i] for i in range(len(mask)) if mask[i]==0]
@@ -425,7 +425,7 @@ def ecco_steric_estimators(estimator, row, pressure_range, integration_mode):
         row['absolute_salinity'] = gsw.conversions.SA_from_SP(row['salinity'], row['pressure'], row['longitude'], row['latitude'])
     if not 'conservative_temperature' in row:
         row['conservative_temperature'] = gsw.conversions.CT_from_t(row['absolute_salinity'], row['temperature'], row['pressure'])
-    
+
     # preinterpolation
     combspace = 0.2
     levels = integration_comb(pressure_range, spacing=0.2)
