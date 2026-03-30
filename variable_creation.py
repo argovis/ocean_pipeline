@@ -92,33 +92,9 @@ if len(df) > 0:
                 axis=1
             )
 
-        if var == 'steric_hgt_anom' and 'steric_hgt_anom' not in df.columns:
-            df[['steric_hgt_anom', 'flag']] = df.apply(
-                lambda row: pandas.Series(helpers.steric_hgt_anom(row, args.pressure_range, args.integration_mode)),
-                axis=1
-            )
-
-        if var == 'thermosteric_hgt_anom_linear' and 'thermosteric_hgt_anom_linear' not in df.columns:
-            df[['thermosteric_hgt_anom_linear', 'flag']] = df.apply(
-                lambda row: pandas.Series(helpers.thermosteric_hgt_anom_linear(row, args.pressure_range, args.integration_mode)),
-                axis=1
-            )
-
-        if var == 'halosteric_hgt_anom_linear' and 'halosteric_hgt_anom_linear' not in df.columns:
-            df[['halosteric_hgt_anom_linear', 'flag']] = df.apply(
-                lambda row: pandas.Series(helpers.halosteric_hgt_anom_linear(row, args.pressure_range, args.integration_mode)),
-                axis=1
-            )
-
-        if var == 'thermosteric_hgt_anom' and 'thermosteric_hgt_anom' not in df.columns:
-            df[['thermosteric_hgt_anom', 'flag']] = df.apply(
-                lambda row: pandas.Series(helpers.thermosteric_hgt_anom(row, args.pressure_range, args.integration_mode)),
-                axis=1
-            )
-
-        if var == 'halosteric_hgt_anom' and 'halosteric_hgt_anom' not in df.columns:
-            df[['halosteric_hgt_anom', 'flag']] = df.apply(
-                lambda row: pandas.Series(helpers.halosteric_hgt_anom(row, args.pressure_range, args.integration_mode)),
+        if var in ['steric_hgt_anom', 'thermosteric_hgt_anom_linear', 'halosteric_hgt_anom_linear', 'thermosteric_hgt_anom', 'halosteric_hgt_anom'] and var not in df.columns:
+            df[[var, 'flag']] = df.apply(
+                lambda row: pandas.Series(helpers.ecco_steric_estimators(var, row, args.pressure_range, args.integration_mode)),
                 axis=1
             )
 
