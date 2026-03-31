@@ -447,7 +447,7 @@ def ecco_steric_estimators(estimator, row, pressure_range, integration_mode):
         beta = gsw.density.beta(S_Ar,T_Cr,levels)
         specvol_est = -specvol_standard*beta*(absolute_salinity - S_Ar)
     elif estimator == 'thermosteric_hgt_anom':
-        specspecvol_estvol_thermo_anom = gsw.density.specvol(S_Ar,conservative_temperature,levels) - specvol_standard
+        specvol_est = gsw.density.specvol(S_Ar,conservative_temperature,levels) - specvol_standard
     elif estimator == 'halosteric_hgt_anom':
         specvol_est = gsw.density.specvol(absolute_salinity,T_Cr,levels) - specvol_standard
 
