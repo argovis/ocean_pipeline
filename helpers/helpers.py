@@ -244,20 +244,21 @@ def trapezoidal_integration(row, var, pressure_range, interpolate_spacing=0.2):
         levels = integration_comb(pressure_range, interpolate_spacing)
         interp_var, f = interpolate_to_levels(row, var, levels)
         flag = flag | f
-        return scipy.integrate.trapezoid(interp_var, x=levels), flag
+        return [scipy.integrate.trapezoid(interp_var, x=levels)], flag
     else:
         low_i = -1
         high_i = -1
         for i, lvl in enumerate(row['pressure']):
-            if lvl<pressure_range[0]:
+            if lvl<=pressure_range[0]:
                 low_i = i
-            elif lvl<pressure_range[1]:
+            elif lvl<=pressure_range[1]:
                 high_i = i
-        low_i += 1
+        if row['pressure'][low_i] < pressure_range[0]:
+            low_i += 1 # force bounds to be inside pressure range if they fall outside
         if low_i == -1 or high_i == -1 or low_i >= high_i:
             return [None], flag | 64 # bit of a stretch of this flag but hopefully context will clarify
         else:
-            return scipy.integrate.trapezoid(variable[low_i:high_i+1], x=pressure[low_i:high_i+1]), flag
+            return [scipy.integrate.trapezoid(row[var][low_i:high_i+1], x=row['pressure'][low_i:high_i+1])], flag
 
 def integration_comb(region, spacing=0.2):
     # generates a level spectrum with <spacing> levels populating the <region>
@@ -389,22 +390,12 @@ def safe_open_dataset(fn):
 
         return xar
 
-def all_present(*arrays):
-    # arrays: list of lists representing level data
-    # filter off any level that is undefined for any variable
-    levels = list(zip(*arrays))
-    levels = [x for x in levels if numpy.all(~numpy.isnan(x))]
-    vectors = [numpy.array(x) for x in list(zip(*levels))]
-    if len(vectors) == 0:
-        return [numpy.array([])]*len(arrays)
-    else:
-        return vectors
-
-def ecco_steric_estimators(estimator, row, pressure_range, integration_mode):
-    # ECCO steric height estimators following xxx
+def ecco_steric_estimators(estimator, row, pressure_range, integration_mode, ecco_stationary=False):
+    # ECCO steric height estimators following https://ecco-v4-python-tutorial.readthedocs.io/Steric_height.html
     # estimator: 'steric_hgt_anom', 'thermosteric_hgt_anom_linear', 'halosteric_hgt_anom_linear', 'thermosteric_hgt_anom', 'halosteric_hgt_anom'
     # pressure_range: [min, max] pressure in dbar to integrate over for integration_mode=='trapezoidal'
     # integration_mode: 'trapezoidal' only (other modes forthcoming).
+    # ecco_stationary: calculate and return the specific volume estimator exactly as ecco for the sake of unit testing
 
     flag = 0
     errorflag = {
@@ -427,13 +418,18 @@ def ecco_steric_estimators(estimator, row, pressure_range, integration_mode):
         row['conservative_temperature'] = gsw.conversions.CT_from_t(row['absolute_salinity'], row['temperature'], row['pressure'])
 
     # preinterpolation
-    combspace = 0.2
-    levels = integration_comb(pressure_range, spacing=0.2)
-    absolute_salinity, f = interpolate_to_levels(row, 'absolute_salinity', levels)
-    flag = flag | f
-    if estimator not in ['halosteric_hgt_anom_linear', 'halosteric_hgt_anom']:
-        conservative_temperature, f = interpolate_to_levels(row, 'conservative_temperature', levels)
+    if ecco_stationary:
+        absolute_salinity = numpy.array(row['absolute_salinity'])
+        conservative_temperature = numpy.array(row['conservative_temperature'])
+        levels = numpy.array(row['pressure'])
+    else:
+        combspace = 0.2
+        levels = integration_comb(pressure_range, spacing=0.2)
+        absolute_salinity, f = interpolate_to_levels(row, 'absolute_salinity', levels)
         flag = flag | f
+        if estimator not in ['halosteric_hgt_anom_linear', 'halosteric_hgt_anom']:
+            conservative_temperature, f = interpolate_to_levels(row, 'conservative_temperature', levels)
+            flag = flag | f
 
     # compute the specific volume estimator to be integrated
     specvol_standard = gsw.density.specvol(S_Ar,T_Cr,levels)
@@ -450,6 +446,9 @@ def ecco_steric_estimators(estimator, row, pressure_range, integration_mode):
         specvol_est = gsw.density.specvol(S_Ar,conservative_temperature,levels) - specvol_standard
     elif estimator == 'halosteric_hgt_anom':
         specvol_est = gsw.density.specvol(absolute_salinity,T_Cr,levels) - specvol_standard
+
+    if ecco_stationary:
+        return specvol_est
 
     # integrate
     if integration_mode == 'trapezoidal':
