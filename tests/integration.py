@@ -1,5 +1,6 @@
 import subprocess, os, tempfile, json, glob, shutil, datetime, numpy, gsw, scipy.interpolate, scipy.io, copy
 import pandas as pd
+from helpers import helpers
 
 def test_argovis_pipeline():
     tmpdir = tempfile.mkdtemp(prefix="test_data_dir_")
@@ -40,59 +41,54 @@ def test_argovis_pipeline():
         assert numpy.array_equal(df["pressure_qc"].iloc[0][0:5], [1,1,1,1,1])
         assert numpy.array_equal(df["salinity_qc"].iloc[0][0:5], [1,1,1,1,1])
 
-        # 2. variable_creation.py
+        # 2a. variable_creation.py - interpolation
         variable_creation_out = os.path.join(tmpdir, "potential_temperature.parquet")
         result = subprocess.run(
-            ["python", "variable_creation.py", "--input_file", selectionfile, "--variable", "potential_temperature", "--output_file", variable_creation_out],
+            ["python", "variable_creation.py", "--input_file", selectionfile, "--variables", "potential_temperature", "--output_file", variable_creation_out, "--interpolate_level", "5.5" ],
             capture_output=True,
             text=True,
         )
         assert result.returncode == 0, f"Script failed:\n{result.stderr}"
         variable_creation = glob.glob(variable_creation_out)
         df = pd.read_parquet(variable_creation[0])
-        index = 5 # spot check a calculated absolute salinity and potential temperature
-        pressure = df["pressure"].iloc[0][index]
-        temperature = df["temperature"].iloc[0][index]
-        salinity = df["salinity"].iloc[0][index]
-        longitude = df["longitude"].iloc[0]
-        latitude = df["latitude"].iloc[0]
-        absolute_salinity = gsw.conversions.SA_from_SP(salinity, pressure, longitude, latitude)
-        potential_temperature = gsw.conversions.pt0_from_t(absolute_salinity, temperature, pressure)
-        assert numpy.allclose(df["potential_temperature"].iloc[0][index], potential_temperature)
-        assert numpy.allclose(df["absolute_salinity"].iloc[0][index], absolute_salinity)
+        ## reconstruct interpolation to check:
+        df_selected = pd.read_parquet(selectionfile)
+        df_selected['absolute_salinity'] = df_selected.apply(
+            lambda row: gsw.conversions.SA_from_SP(
+                row['salinity'], row['pressure'], row['longitude'], row['latitude']
+            ),
+            axis=1
+        )
+        df_selected['potential_temperature'] = df_selected.apply(
+            lambda row: gsw.conversions.pt0_from_t(
+                row['absolute_salinity'], row['temperature'], row['pressure']
+            ),
+            axis=1
+        )
+        interp = scipy.interpolate.PchipInterpolator(df_selected["pressure"].iloc[0], df_selected["potential_temperature"].iloc[0], extrapolate=False)([5.5])
+        assert numpy.allclose(interp, df["potential_temperature"].iloc[0], equal_nan=True)
 
-        # 3a. interpolate.py
-        interpolate_out = os.path.join(tmpdir, "interpolated.parquet")
+        # # 2b. variable_creation.py - integration
+        variable_creation_out = os.path.join(tmpdir, "potential_temperature.parquet")
         result = subprocess.run(
-            ["python", "interpolate.py", "--input_file", variable_creation_out, "--output_file", interpolate_out, "--level", "5.5", "--variable", "potential_temperature"],
+            ["python", "variable_creation.py", "--input_file", selectionfile, "--variables", "potential_temperature", "--output_file", variable_creation_out, "--integration_mode", "trapezoidal", '--pressure_range', '15,300'],
             capture_output=True,
             text=True,
         )
         assert result.returncode == 0, f"Script failed:\n{result.stderr}"
-        interpolate = glob.glob(interpolate_out)
-        df = pd.read_parquet(interpolate[0])
-        ## pipeline should track pchip interpolation
-        interp = scipy.interpolate.PchipInterpolator(df["pressure"].iloc[0], df["potential_temperature"].iloc[0], extrapolate=False)([5.5])
-        assert numpy.allclose(interp, df["potential_temperature_interpolation"].iloc[0], equal_nan=True)
-
-        # 3b. integrate.py
-        integrate_out = os.path.join(tmpdir, "integrated.parquet")
-        result = subprocess.run(
-            ["python", "integrate.py", "--input_file", variable_creation_out, "--output_file", integrate_out, "--variable", "potential_temperature", "--region", "5,10"],
-            capture_output=True,
-            text=True,
-        )
-        assert result.returncode == 0, f"Script failed:\n{result.stderr}"
-        integrate = glob.glob(integrate_out)
-        df = pd.read_parquet(integrate[0])
-        # basic integration stability check
-        assert numpy.allclose(df["potential_temperature_integration"].iloc[0], [1512.0568956])
-        assert df.shape[0] == 3, "still three profiles at this point in the pipeline"
+        variable_creation = glob.glob(variable_creation_out)
+        df = pd.read_parquet(variable_creation[0])
+        ## reconstruct integration to check:
+        row = df_selected.iloc[0]
+        levels = helpers.integration_comb([15,300], 0.2)
+        interp = scipy.interpolate.PchipInterpolator(row['pressure'], row['potential_temperature'],extrapolate=False)(levels)
+        integral = scipy.integrate.trapezoid(interp, x=levels)
+        assert numpy.allclose(integral, df["potential_temperature"].iloc[0], equal_nan=True)
   
-        # 4. downsample.py
+        # 3. downsample.py
         downsample_out = os.path.join(tmpdir, "downsampled.parquet")
         result = subprocess.run(
-            ["python", "downsample.py", "--input_file", integrate_out, "--output_file", downsample_out],
+            ["python", "downsample.py", "--input_file", variable_creation_out, "--output_file", downsample_out],
             capture_output=True,
             text=True,
         )
@@ -100,13 +96,12 @@ def test_argovis_pipeline():
         downsample = glob.glob(downsample_out)
         df = pd.read_parquet(downsample[0])
         # basic downsample check
-
         assert df.shape[0] == 2, "Downsampled file should have only two rows left"
 
-        # 5. matlab_convert.py
+        # 4. matlab_convert.py
         matlab_out = os.path.join(tmpdir, "converted.mat")
         result = subprocess.run(
-            ["python", "matlab4localgp.py", "--input_file", downsample_out, "--output_file", matlab_out, "--variable", "potential_temperature_integration"],
+            ["python", "matlab4localgp.py", "--input_file", downsample_out, "--output_file", matlab_out, "--variable", "potential_temperature"],
             capture_output=True,
             text=True,
         )
@@ -114,7 +109,7 @@ def test_argovis_pipeline():
         matlab_convert = glob.glob(matlab_out)
         mat = scipy.io.loadmat(matlab_convert[0])
         # basic matlab conversion check
-        assert numpy.allclose(mat['profVariableAggrMonth'][0][0], 1512.0568956)
+        assert numpy.allclose(mat['profVariableAggrMonth'][0][0], 4656.01821345319)
         assert numpy.allclose(mat['profLatAggrMonth'][0][0], 2.32012)
         assert numpy.allclose(mat['profLongAggrMonth'][0][0], 360-27.4493)
         assert numpy.allclose(mat['profFloatIDAggrMonth'][0][0], 1902305)

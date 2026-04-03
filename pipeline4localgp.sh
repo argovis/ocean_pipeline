@@ -4,21 +4,21 @@
 
 # set your run configuration here----------------------------------------------------------------
 
-declare upstream='argonc' 			# 'argovis', 'wod' or 'argonc' [wip, argonc only reliable one for now]
+declare runtag='OP20260320'                               # unique ID for this run
+declare variable='dynamic_height_anom'        # 'absolute_salinity', 'potential_temperature', 'conservative_temperature', 'potential_density', 'mld', 'dynamic_height_anom', 'steric_hgt_anom', 'thermosteric_hgt_anom_linar', 'halosteric_hgt_anom_linear', 'thermosteric_hgt_anom', 'halosteric_hgt_anom'
+declare level=None                                # dbar to interpolate to if interpolation is desired; None otherwise
+declare region='15,300'                         # integration dbar region, string CSV, in integration mode
+declare selectprofiles='false'                  # 'true' to run data selection step (slow), 'false' to use previously run data-selection step with the same runtag. Nominally should only need to run true once for a list of downstream variable computations.
+## you probably don't need to touch the following
+declare integration_mode='trapezoidal'             # integration method; currently only 'trapezoidal', or None if integration not desired
 declare data_dir=$1				# where is the relevant upstream data?
 declare year=$2					# year this data corresponds to
 declare month=$3				# month this data corresponds to
-declare runtag='OP20260320'                               # unique ID for this run
-declare vartype='none'                   # 'integration', 'interpolation', or 'none' (if no interpoltions or integrations needed)
-declare variable='steric_hgt_anom'        # 'absolute_salinity', 'potential_temperature', 'conservative_temperature', 'potential_density', 'mld', 'dynamic_height_anom'
-declare level=50                                # dbar to interpolate to in interpolation mode
-declare region='15,20'                         # integration dbar region, string CSV, in integration mode
 declare pqc='1,2'                                   # qc to keep for pressure, can be single valued (0) or string CSV ('0,1')
 declare tqc='1,2'                                   # qc to keep for temeprature
 declare sqc='1,2'                               # qc to keep for salinity
 declare wod_filetypes='PFL,MRB,CTD'		# WOD filetypes, wod only
-declare selectprofiles='true'                  # 'true' to run data selection step (slow), 'false' to use previously run data-selection step with the same runtag. Nominally should only need to run true once for a list of 'region' values.
-
+declare upstream='argonc' 			# 'argovis', 'wod' or 'argonc' [wip, argonc only reliable one for now]
 # don't touch below this line -------------------------------------------------------------------
 
 # Input validation
@@ -39,9 +39,18 @@ if ! [[ "$month" =~ ^-?[0-9]+$ ]]; then
   exit 1
 fi
 
+# set up some file naming
 qctag="p${pqc//,/}_t${tqc//,/}_s${sqc//,/}"
 selectionfile=${data_dir}/${runtag}_${year}_${month}_${qctag}_selected_profiles.parquet
-varfile=${data_dir}/${runtag}_${year}_${month}_${qctag}_${variable}.parquet
+if [[ "$region" -ne None ]]; then
+    region_tag=${region/,/_}
+    file_tag=${runtag}_${year}_${month}_${qctag}_${variable}_${region_tag}
+elif [["$level" -ne None]]; then
+    file_tag=${runtag}_${year}_${month}_${qctag}_${variable}_${level}
+fi
+varfile=${data_dir}/${file_tag}.parquet
+
+# select profiles if needed, and compute physics
 if [[ $selectprofiles == 'true' ]]; then
     if [[ $upstream == 'wod' ]]; then
         declare prep_id=$(sbatch --parsable wod.slurm $data_dir $year $month $wod_filetypes $pqc $tqc $sqc $selectionfile)
@@ -51,29 +60,15 @@ if [[ $selectprofiles == 'true' ]]; then
         declare prep_id=$(sbatch --parsable argonc.slurm $data_dir $year $month $selectionfile $pqc $tqc $sqc)
     fi
 
-    declare varcreation=$(sbatch --parsable --dependency=afterok:$prep_id variable_creation.slurm $selectionfile $variable ${varfile} ${region})
+    declare varcreation=$(sbatch --parsable --dependency=afterok:$prep_id variable_creation.slurm $selectionfile $varfile $variable $integration_mode $region $level)
 else
-    declare varcreation=$(sbatch --parsable variable_creation.slurm $selectionfile $variable ${varfile} ${region})
+    declare varcreation=$(sbatch --parsable variable_creation.slurm $selectionfile $varfile $variable $integration_mode $region $level)
 fi
 
-if [[ $vartype == 'interpolation' ]]; then
-    interpfile=${data_dir}/${runtag}_${year}_${month}_${qctag}_${variable}_interpolated_${level}.parquet
-    interp_downsampled=${data_dir}/${runtag}_${year}_${month}_${qctag}_${variable}_interpolated_${level}_downsampled.parquet
-    interp_matlab=${data_dir}/${runtag}_${year}_${month}_${qctag}_${variable}_interpolated_${level}.mat
-    declare interpolation=$(sbatch --parsable --dependency=afterok:$varcreation interpolate.slurm $varfile $level $variable $interpfile)
-    declare downsample=$(sbatch --parsable --dependency=afterok:$interpolation downsample.slurm $interpfile $interp_downsampled)
-    sbatch --dependency=afterok:$downsample matlab4localgp.slurm $interp_downsampled $interp_matlab ${variable}_interpolation
-elif [[ $vartype == 'integration' ]]; then
-    region_tag=${region/,/_}
-    integfile=${data_dir}/${runtag}_${year}_${month}_${qctag}_${variable}_integrated_${region_tag}.parquet
-    integ_downsampled=${data_dir}/${runtag}_${year}_${month}_${qctag}_${variable}_integrated_${region_tag}_downsampled.parquet
-    integ_matlab=${data_dir}/${runtag}_${year}_${month}_${qctag}_${variable}_integrated_${region_tag}.mat
-    declare integration=$(sbatch --parsable --dependency=afterok:$varcreation integrate.slurm $varfile $region $variable $integfile)
-    declare downsample=$(sbatch --parsable --dependency=afterok:$integration downsample.slurm $integfile $integ_downsampled)
-    sbatch --dependency=afterok:$downsample matlab4localgp.slurm $integ_downsampled $integ_matlab ${variable}_integration
-elif [[ $vartype == 'none' ]]; then
-    var_downsampled=${data_dir}/${runtag}_${year}_${month}_${qctag}_${variable}_downsampled.parquet
-    var_matlab=${data_dir}/${runtag}_${year}_${month}_${qctag}_${variable}.mat
-    declare downsample=$(sbatch --parsable --dependency=afterok:$varcreation downsample.slurm $varfile $var_downsampled)
-    sbatch --dependency=afterok:$downsample matlab4localgp.slurm $var_downsampled $var_matlab ${variable}
-fi
+# postprocessing: downsample as needed and turn into the matlab localgp expects
+downsampled=${data_dir}/${file_tag}_downsampled.parquet
+matlab=${data_dir}/${file_tag}.mat
+declare downsample=$(sbatch --parsable --dependency=afterok:$varcreation downsample.slurm $varfile $downsampled)
+sbatch --dependency=afterok:$downsample matlab4localgp.slurm $downsampled $matlab ${variable}
+
+
