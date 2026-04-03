@@ -217,3 +217,15 @@ Compared to previous: Implements steric sea height anomaly estimators from https
    - tag: https://github.com/argovis/localGP/releases/tag/OP20260320
    - input masks: https://github.com/argovis/localGP_masks/releases/tag/OP20260110
  - data origin: https://doi.org/10.17882/42182#125185
+
+## OP20260403 series
+
+Refactors steric sea height anomalies, and also refactors pipeline to combine variable creation, integration and interpolation steps.
+
+ - python env: https://github.com/argovis/ocean_pipeline/blob/main/provenance/environments/python-dev-env.txt
+ - ocean-pipeline
+   - tag: https://github.com/argovis/ocean_pipeline/releases/tag/OP20260403
+ - localGP
+   - tag: https://github.com/argovis/localGP/releases/tag/OP20260320
+   - input masks: https://github.com/argovis/localGP_masks/releases/tag/OP20260110
+ - data origin: https://doi.org/10.17882/42182#125185

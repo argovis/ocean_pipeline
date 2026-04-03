@@ -133,7 +133,7 @@ if len(df) > 0:
     # if any profile has failed to support the calculation of every requested result, drop it.
     # failures are represented by a vector of None for the failed computation.
     dumpmask = df[args.variables].apply(
-        lambda row: all(isinstance(x, list) and all(v is None for v in x) for x in row),
+        lambda row: all(all((v is None or numpy.isnan(v)) for v in x) for x in row),
         axis=1
     )
     dumps = df[dumpmask].reset_index(drop=True)

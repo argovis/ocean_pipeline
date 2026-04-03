@@ -322,11 +322,17 @@ def dha(row, pressure_range, errorflag=1024):
     # integrated from pressure_range[0] to the reference pressure pressure_range[1]
     # row must have absolute_salinity, conservative_temperature and pressure all available.
 
+    flag = 0
+
     # create a dense comb for integration
     # we use our interpolation and not the gsw built-in interpolation as we impose some panics if we aren't satisfied with the in-situ data
     pressure_comb = integration_comb(pressure_range, spacing=0.2)
-    SA_comb, _ = interpolate_to_levels(row, 'absolute_salinity', pressure_comb)
-    CT_comb, _ = interpolate_to_levels(row, 'conservative_temperature', pressure_comb)
+    SA_comb, f = interpolate_to_levels(row, 'absolute_salinity', pressure_comb)
+    flag = flag | f
+    CT_comb, f = interpolate_to_levels(row, 'conservative_temperature', pressure_comb)
+    flag = flag | f
+    if any(x is None or numpy.isnan(x) for x in SA_comb) or any(x is None or numpy.isnan(x) for x in CT_comb) or any(x is None or numpy.isnan(x) for x in pressure_comb):
+        return [None], flag
     dynamic_height_anom = gsw.geostrophy.geo_strf_dyn_height(SA_comb, CT_comb, pressure_comb, p_ref=pressure_range[1])[0] #ie we want the integral from the start of the pressure range, which corresponds to the first pressure in the comb
     # give me a number or give me None
     if math.isnan(dynamic_height_anom):
