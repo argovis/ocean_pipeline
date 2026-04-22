@@ -310,12 +310,15 @@ def mld_estimator(row, errorflag=512):
         return [None], errorflag
     threshold_density = reference_density + 0.03
 
-    # go fishing for the depth that corresponds to the threshold
-    mld = pchip_search(threshold_density, 0, 1000, 1, row, 'potential_density')
-    if mld is None:
-        return [None], 256
+    # inverse pchip interp    
+    pchip = scipy.interpolate.PchipInterpolator(row['pressure'], row['potential_density'], extrapolate=False)
+    roots = numpy.asarray(pchip.solve(threshold_val, extrapolate=False), dtype=float)
+
+    # it's on you to make sure you're giving it a search range without a zillion roots
+    if len(roots) > 0 and not numpy.isnan(roots[0]):
+        return roots[0], 0
     else:
-        return [mld], 0
+        return [None], 512
 
 def dha(row, pressure_range, errorflag=1024):
     # calculate the dynamic height anomaly for this profile,
