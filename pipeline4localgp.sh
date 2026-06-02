@@ -4,10 +4,10 @@
 
 # set your run configuration here----------------------------------------------------------------
 
-declare runtag='OP20260320'                               # unique ID for this run
-declare variable='dynamic_height_anom'        # 'absolute_salinity', 'potential_temperature', 'conservative_temperature', 'potential_density', 'mld', 'dynamic_height_anom', 'steric_hgt_anom', 'thermosteric_hgt_anom_linar', 'halosteric_hgt_anom_linear', 'thermosteric_hgt_anom', 'halosteric_hgt_anom'
+declare runtag='OP20260507'                               # unique ID for this run
+declare variable='potential_temperature'        # 'absolute_salinity', 'potential_temperature', 'conservative_temperature', 'potential_density', 'mld', 'dynamic_height_anom', 'steric_hgt_anom', 'thermosteric_hgt_anom_linar', 'halosteric_hgt_anom_linear', 'thermosteric_hgt_anom', 'halosteric_hgt_anom'
 declare level=None                                # dbar to interpolate to if interpolation is desired; None otherwise
-declare region='15,300'                         # integration dbar region, string CSV, in integration mode
+declare region='1800,1850'                         # integration dbar region, string CSV, in integration mode
 declare selectprofiles='false'                  # 'true' to run data selection step (slow), 'false' to use previously run data-selection step with the same runtag. Nominally should only need to run true once for a list of downstream variable computations.
 ## you probably don't need to touch the following
 declare integration_mode='trapezoidal'             # integration method; currently only 'trapezoidal', or None if integration not desired

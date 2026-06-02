@@ -305,17 +305,35 @@ def mld_estimator(row, errorflag=512):
     # row['potential_density'] == gsw potential density from which to estimate MLD threshold
 
     reference_depth = 10
-    reference_density = interpolate_to_levels(row, 'potential_density', [reference_depth])[0][0]
-    if numpy.isnan(reference_density):
-        return [None], errorflag
-    threshold_density = reference_density + 0.03
+    reference_density, f = interpolate_to_levels(row, 'potential_density', [reference_depth])
+    if numpy.isnan(reference_density[0]):
+        return [None], f
+    threshold_density = reference_density[0] + 0.03
 
-    # go fishing for the depth that corresponds to the threshold
-    mld = pchip_search(threshold_density, 0, 1000, 1, row, 'potential_density')
-    if mld is None:
-        return [None], 256
+    # inverse pchip interp
+    pressure, potential_density, flag = tidy_profile(row['pressure'], row['potential_density'], row['flag'])
+    # some truly pathological profiles will have no levels left at this point
+    if len(pressure) == 0:
+        flag = flag | 16
+        return [None], flag
+    # ROI must contain at least two points for Pchip
+    if len(pressure) < 2:
+        flag = flag | 16
+        return [None], flag
+
+    pchip = scipy.interpolate.PchipInterpolator(pressure, potential_density, extrapolate=False)
+    roots = numpy.asarray(pchip.solve(threshold_density, extrapolate=False), dtype=float)
+
+    # it's on you to make sure you're giving it a search range without a zillion roots
+    if len(roots) > 0 and not numpy.isnan(roots[0]):
+        # return the first root > reference pressure
+        roots.sort()
+        for r in roots:
+            if r > reference_depth:
+                return [r], flag
+        return [None], errorflag # roots exist but none of them physical
     else:
-        return [mld], 0
+        return [None], errorflag
 
 def dha(row, pressure_range, errorflag=1024):
     # calculate the dynamic height anomaly for this profile,
