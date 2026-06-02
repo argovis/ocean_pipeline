@@ -6,6 +6,7 @@ from helpers import helpers
 parser = argparse.ArgumentParser()
 parser.add_argument("--input_file", type=str, help="parquet file with longitude, latitude, and juld")
 parser.add_argument("--output_file", type=str, help="name of output file, with path.")
+parser.add_argument("--simple_choice", action='store_true', help="if set, just choose the first profile in each bin, instead of using the more complex helper function to choose a winner")
 args = parser.parse_args()
 
 df = pandas.read_parquet(args.input_file, engine='pyarrow')
@@ -18,7 +19,10 @@ if len(df):
     df['day_bin'] = numpy.floor(df['juld'])
 
     group_cols = ['lon_bin', 'lat_bin', 'week_bin']
-    winner_idx = (df.groupby(group_cols, sort=False).apply(lambda g: helpers.choose_profile(g).name)).to_numpy()
+    if args.simple_choice:
+        winner_idx = (df.groupby(group_cols, sort=False).apply(lambda g: helpers.choose_profile(g, True).name, include_groups=False)).to_numpy()
+    else:
+        winner_idx = (df.groupby(group_cols, sort=False).apply(lambda g: helpers.choose_profile(g, False).name, include_groups=False)).to_numpy()
 
     # use the group winner's float_cycle as the flag value for rejected profiles
     winners = df.loc[winner_idx, group_cols + ['float', 'cycle']].copy()
