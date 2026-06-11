@@ -4,11 +4,13 @@
 
 # set your run configuration here----------------------------------------------------------------
 
-declare runtag='OP20260507'                               # unique ID for this run
-declare variable='potential_temperature'        # 'absolute_salinity', 'potential_temperature', 'conservative_temperature', 'potential_density', 'mld', 'dynamic_height_anom', 'steric_hgt_anom', 'thermosteric_hgt_anom_linar', 'halosteric_hgt_anom_linear', 'thermosteric_hgt_anom', 'halosteric_hgt_anom'
+declare runtag='ME4OHdev'                               # unique ID for this run
+declare variable='None'        # 'absolute_salinity', 'potential_temperature', 'conservative_temperature', 'potential_density', 'mld', 'dynamic_height_anom', 'steric_hgt_anom', 'thermosteric_hgt_anom_linar', 'halosteric_hgt_anom_linear', 'thermosteric_hgt_anom', 'halosteric_hgt_anom'. 'none' will make the variable creation step a no-op.
 declare level=None                                # dbar to interpolate to if interpolation is desired; None otherwise
 declare region='1800,1850'                         # integration dbar region, string CSV, in integration mode
 declare selectprofiles='false'                  # 'true' to run data selection step (slow), 'false' to use previously run data-selection step with the same runtag. Nominally should only need to run true once for a list of downstream variable computations.
+declare upstream='me4oh'                       # 'argovis', 'wod', 'argonc', 'me4oh' [wip, argonc and me4oh only reliable one for now]
+declare me4oh_levelidx=0                        # 0,1 or 2 to pick the level from the upstream data in me4oh
 ## you probably don't need to touch the following
 declare integration_mode='trapezoidal'             # integration method; currently only 'trapezoidal', or None if integration not desired
 declare data_dir=$1				# where is the relevant upstream data?
@@ -18,7 +20,6 @@ declare pqc='1,2'                                   # qc to keep for pressure, c
 declare tqc='1,2'                                   # qc to keep for temeprature
 declare sqc='1,2'                               # qc to keep for salinity
 declare wod_filetypes='PFL,MRB,CTD'		# WOD filetypes, wod only
-declare upstream='argonc' 			# 'argovis', 'wod' or 'argonc' [wip, argonc only reliable one for now]
 # don't touch below this line -------------------------------------------------------------------
 
 # Input validation
@@ -58,6 +59,8 @@ if [[ $selectprofiles == 'true' ]]; then
         declare prep_id=$(sbatch --parsable argovis.slurm $data_dir $year $month $selectionfile $pqc $tqc $sqc)
     elif [[ $upstream == 'argonc' ]]; then
         declare prep_id=$(sbatch --parsable argonc.slurm $data_dir $year $month $selectionfile $pqc $tqc $sqc)
+    elif [[ $upstream == 'me4oh' ]]; then
+        declare prep_id=$(sbatch --parsable me4oh_input.slurm $data_dir $year $month $selectionfile $variable $me4oh_levelidx)
     fi
 
     declare varcreation=$(sbatch --parsable --dependency=afterok:$prep_id variable_creation.slurm $selectionfile $varfile $variable $integration_mode $region $level)
