@@ -16,4 +16,4 @@ module load anaconda/2023.09
 conda activate wod2mat
 
 cd $SLURM_SUBMIT_DIR
-python downsample.py --input_file $1 --output_file $2
+python downsample.py --input_file $1 --output_file $2 --simple_choice $3

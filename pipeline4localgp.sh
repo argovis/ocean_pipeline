@@ -4,15 +4,16 @@
 
 # set your run configuration here----------------------------------------------------------------
 
-declare runtag='ME4OHdev'                               # unique ID for this run
-declare variable='None'        # 'absolute_salinity', 'potential_temperature', 'conservative_temperature', 'potential_density', 'mld', 'dynamic_height_anom', 'steric_hgt_anom', 'thermosteric_hgt_anom_linar', 'halosteric_hgt_anom_linear', 'thermosteric_hgt_anom', 'halosteric_hgt_anom'. 'none' will make the variable creation step a no-op.
+declare runtag='OP20260507'                               # unique ID for this run
+declare variable='absolute_salinity'        # 'absolute_salinity', 'potential_temperature', 'conservative_temperature', 'potential_density', 'mld', 'dynamic_height_anom', 'steric_hgt_anom', 'thermosteric_hgt_anom_linar', 'halosteric_hgt_anom_linear', 'thermosteric_hgt_anom', 'halosteric_hgt_anom'. Anything else will make the variable creation step a no op (ie assumes its already present).
 declare level=None                                # dbar to interpolate to if interpolation is desired; None otherwise
-declare region='1800,1850'                         # integration dbar region, string CSV, in integration mode
+declare region='700,1000'                         # integration dbar region, string CSV, in integration mode
 declare selectprofiles='false'                  # 'true' to run data selection step (slow), 'false' to use previously run data-selection step with the same runtag. Nominally should only need to run true once for a list of downstream variable computations.
-declare upstream='me4oh'                       # 'argovis', 'wod', 'argonc', 'me4oh' [wip, argonc and me4oh only reliable one for now]
-declare me4oh_levelidx=0                        # 0,1 or 2 to pick the level from the upstream data in me4oh
-## you probably don't need to touch the following
+declare upstream='argonc'                       # 'argovis', 'wod', 'argonc', 'me4oh' [wip, argonc and me4oh only reliable one for now]
+declare me4oh_levelidx=2                        # 0,1 or 2 to pick the level from the upstream data in me4oh
 declare integration_mode='trapezoidal'             # integration method; currently only 'trapezoidal', or None if integration not desired
+declare simple_downsample='False'          # set to 'True' to just take the first item in a cluster of measurements (typically for me4oh); otherwise perform a depth and resolution heuristic to choose (requires a 'pressure' vector to be present)
+## you probably don't need to touch the following
 declare data_dir=$1				# where is the relevant upstream data?
 declare year=$2					# year this data corresponds to
 declare month=$3				# month this data corresponds to
@@ -41,15 +42,21 @@ if ! [[ "$month" =~ ^-?[0-9]+$ ]]; then
 fi
 
 # set up some file naming
-qctag="p${pqc//,/}_t${tqc//,/}_s${sqc//,/}"
-selectionfile=${data_dir}/${runtag}_${year}_${month}_${qctag}_selected_profiles.parquet
-if [[ "$region" -ne None ]]; then
-    region_tag=${region/,/_}
-    file_tag=${runtag}_${year}_${month}_${qctag}_${variable}_${region_tag}
-elif [["$level" -ne None]]; then
-    file_tag=${runtag}_${year}_${month}_${qctag}_${variable}_${level}
+if [[ $upstream == 'me4oh' ]]; then
+    selectionfile=${data_dir}/${runtag}_${year}_${month}_selected_data.parquet
+    file_tag=${runtag}_${year}_${month}_${variable}_${me4oh_levelidx}
+    varfile=${data_dir}/${file_tag}.parquet
+else
+    qctag="p${pqc//,/}_t${tqc//,/}_s${sqc//,/}"
+    selectionfile=${data_dir}/${runtag}_${year}_${month}_${qctag}_selected_profiles.parquet
+    if [[ "$region" -ne None ]]; then
+        region_tag=${region/,/_}
+        file_tag=${runtag}_${year}_${month}_${qctag}_${variable}_${region_tag}
+    elif [["$level" -ne None]]; then
+        file_tag=${runtag}_${year}_${month}_${qctag}_${variable}_${level}
+    fi
+    varfile=${data_dir}/${file_tag}.parquet
 fi
-varfile=${data_dir}/${file_tag}.parquet
 
 # select profiles if needed, and compute physics
 if [[ $selectprofiles == 'true' ]]; then
@@ -71,7 +78,7 @@ fi
 # postprocessing: downsample as needed and turn into the matlab localgp expects
 downsampled=${data_dir}/${file_tag}_downsampled.parquet
 matlab=${data_dir}/${file_tag}.mat
-declare downsample=$(sbatch --parsable --dependency=afterok:$varcreation downsample.slurm $varfile $downsampled)
+declare downsample=$(sbatch --parsable --dependency=afterok:$varcreation downsample.slurm $varfile $downsampled $simple_downsample)
 sbatch --dependency=afterok:$downsample matlab4localgp.slurm $downsampled $matlab ${variable}
 
 

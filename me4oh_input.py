@@ -27,6 +27,7 @@ df = pandas.DataFrame({
     'float': [-1] * len(vals),
     'cycle': ['xxxx'] * len(vals),
     args.var: vals,
+    'flag': [0] * len(vals),
 })
 
 df.to_parquet(args.output_file, engine='pyarrow')
