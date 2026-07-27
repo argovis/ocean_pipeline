@@ -4,11 +4,11 @@
 #SBATCH --nodes=1
 #SBATCH --ntasks-per-node=1
 #SBATCH --time=12:00:00
-#SBATCH --job-name=downsample-pipeline
+#SBATCH --job-name=me4oh_input
 #SBATCH --output=%x.%j.out
 #SBATCH --mail-type=FAIL
 #SBATCH --mail-user=katie.mills@colorado.edu
-#SBATCH --mem=16GB
+#SBATCH --mem=32GB
 #SBATCH --exclude=blanca-g6-u21
 
 module purge
@@ -16,4 +16,9 @@ module load anaconda/2023.09
 conda activate wod2mat
 
 cd $SLURM_SUBMIT_DIR
-python downsample.py --input_file $1 --output_file $2 --simple_choice $3
+python me4oh_input.py --data_dir $1 --year $2 --month $3 --output_file $4 --var $5 --level_index $6
+
+
+
+
+

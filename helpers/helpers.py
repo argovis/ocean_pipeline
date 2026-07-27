@@ -272,9 +272,12 @@ def integration_comb(region, spacing=0.2):
 def dz_integration(row, var):
     return [None], 256 # unimplemented
 
-def choose_profile(group):
+def choose_profile(group, take_first=False):
     # prefer the highest resolution profile as calculated over the depth range covered by all profiles in the group
     # allow a slightly lower res profile if it goes deeper
+
+    if take_first:
+        return group.iloc[0]
 
     df = group.copy()
     shallowest = df['pressure'].apply(lambda lst: lst[-1]).min() # ie shallowest bottom of all the profiles in the group
