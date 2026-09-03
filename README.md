@@ -20,20 +20,17 @@ the `provenance/` subdirectory here is an appropriate place for these records.
 
 Argo's GDACs provide the complete Argo dataset as netCDF files; they also publish a [DOI-stamped release](https://www.seanoe.org/data/00311/42182/) regularly. Prep this data for localGP as follows:
 
-### Data sorting
+### 1. Downlaod & sort (1 / Argo DOI)
 
-After downloading the DOI of interest or rsyncing one of the GDACs, sort the profile netCDF files into folders organized by month:
+Set the config varibles at the top of `dl_sort.sh` and run it to download a tarball of Argo data, unpack it, and sort it into monthly bins as ocean_pipeline expects. Takes a few hours. Tips:
 
- - The Argo DOI zips core and BGC profiles separately; at the time of writing, localgp-input only considers core profiles and assumes only the core archives are unzipped.
- - Sort handled by `sort_argonc.py`, see top of that file for usage instructions.
- - Slurm it with `sort_argonc.slurm` if desired; those who feel fancy could write a loop over DACs (aoml bodc csio incois kma meds coriolis csiro jma kordi nmdis), or even parallelize at the sub-DAC level (aoml takes forever).
- - Note this copies, and does not move, profile .nc, which means you'll need enough disk to accommodate.
- - Will create subdirectories `YYYY_MM` for each month of data under your target location.
+- Feel free to delete the tarball and its unpacked directories once the process is complete; you'll only need the copy that lands under `${target_dir}/sorted`.
+- You'll probably want to do this on `/scratch`, but if you have the allocation to spare, copy the reuslt over to `/pl` so you don't have to redo this every 3 months when files age out on scratch.
 
-### Processing pipeline
+### 2. Processing pipeline (1 / LocalGP map)
 
-Once input netCDF files are sorted by month, `pipeline4localgp.sh` supports preparing these files for consumption by localGP:
+Once input netCDF files are sorted by month, `launch_localgp_pipelines.sh` supports preparing these files for consumption by localGP:
 
- - Start by setting appropriate variables for this run in the block at the top of `pipeline4localgp.sh`.
- - Run `launch_localgp_pipelines.sh` to launch an appropriate pipeline of jobs for the study period on a slurm-managed cluster. Make sure to provide the appropriate paths to wherever you sorted your data in the previous step.
- - Each YYYY_MM directory will have an appropriately named .mat file representing the profiles for that month. Write a script to copy them into your target directory for localGP, `xx/MonthlyInputs/2004_2025/.`
+ - Start by setting appropriate variables for this run in the block at the top of `launch_localgp_pipelines.sh`. There are some others at the top of `pipeline4localgp.sh` which you can probably leave alone.
+ - Run `bash launch_localgp_pipelines.sh` to launch an appropriate pipeline of jobs for the study period on a slurm-managed cluster.
+ - The LoclGP run directories created in this step will, upon completion, have their MonthlyInput directories populated with data selected according to the parameters set, and you're ready to run LocalGP.

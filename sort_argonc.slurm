@@ -4,8 +4,8 @@
 #SBATCH --partition=blanca-giglio
 #SBATCH --export=NONE
 #SBATCH --nodes=1
-#SBATCH --ntasks-per-node=1
-#SBATCH --time=168:00:00
+#SBATCH --ntasks-per-node=8
+#SBATCH --time=24:00:00
 #SBATCH --job-name=nc_sort
 #SBATCH --output=%x.%j.out
 #SBATCH --mail-type=FAIL
@@ -18,4 +18,5 @@ module load anaconda/2023.09
 conda activate wod2mat
 
 cd $SLURM_SUBMIT_DIR
-python sort_argonc.py /scratch/alpine/wimi7695/argo_doi_2026/202601-ArgoData/dac/$1 /scratch/alpine/wimi7695/argo_doi_2026/sorted_202601
+#python sort_argonc.py $1/$2 $1/sorted
+python sort_argonc_parallel.py $1/$2 $1/sorted

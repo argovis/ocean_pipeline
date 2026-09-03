@@ -9,7 +9,6 @@
 #SBATCH --mail-type=FAIL
 #SBATCH --mail-user=katie.mills@colorado.edu
 #SBATCH --mem=32GB
-#SBATCH --exclude=blanca-g6-u21
 
 module purge
 module load anaconda/2023.09
