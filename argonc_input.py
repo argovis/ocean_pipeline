@@ -92,7 +92,8 @@ for fn in glob.glob(os.path.join(source_dir, '*.nc')):
     if POSITION_QC not in [1,2]:
         flag += 1
     ## QC 1 time
-    if JULD_QC not in [1,2,8]:
+    #if JULD_QC not in [1,2,8]:
+    if JULD_QC not in [1,2]: # OP20260901: try removing 8 to re-examine tail biases
         flag += 2
     ## no startup cycles
     if CYCLE_NUMBER == 0:

@@ -17,3 +17,4 @@ conda activate wod2mat
 
 cd $SLURM_SUBMIT_DIR
 python matlab4localgp.py --input_file $1 --output_file $2 --variable $3
+mv $2 $4
